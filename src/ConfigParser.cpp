@@ -185,12 +185,46 @@ void ConfigParser::parse()
 	}
 }
 
+void	ConfigParser::validate(){
+	for (size_t i = 0; i < _servers.size(); ++i)
+	{
+		if (_servers[i].listen_port == 0 || _servers[i].listen_port > 65535)
+			throw std::runtime_error("Invalid listen port");
+		if (_servers[i].client_max_body_size == 0)
+			throw std::runtime_error("Client max body size is > 0.");
+		std::vector<LocationConfig> &__locations = _servers[i].locations;
+		for (size_t j = 0; j < __locations.size(); ++j)
+			for (size_t k = j + 1; k < __locations.size(); ++k)
+				if (__locations[j].path == __locations[k].path)
+					throw std::runtime_error("Ambiguous routing.");
+		for (size_t idx = 0; idx < __locations.size(); ++idx)
+		{
+			if (__locations[idx].allowed_methods.empty())
+				throw std::runtime_error("There is no location method");
+			if ((!__locations[idx].cgi_ext.empty() && __locations[idx].cgi_path.empty())
+				|| (__locations[idx].cgi_ext.empty() && !__locations[idx].cgi_path.empty()))
+				throw std::runtime_error("CGI parameters has only one of (extention or path) need both.");
+			if (__locations[idx].upload_enable && __locations[idx].upload_path.empty())
+				throw std::runtime_error("Upload enabled with no path.");
+			if (__locations[idx].root.empty())
+				__locations[idx].root = _servers[i].root;
+		}
+	}
+	for (size_t i = 0; i < _servers.size(); ++i)
+		for (size_t j = i + 1; j < _servers.size(); ++j)
+			if (_servers[i].host == _servers[j].host
+				&& _servers[i].listen_port == _servers[j].listen_port
+				&& _servers[i].server_name == _servers[j].server_name)
+					throw std::runtime_error("host:port collision");
+}
+
 ConfigParser::ConfigParser(const std::string& filename):_index(0)
 {
 	tokenize(filename);
 	if (!_tokens.size())
 		throw std::runtime_error("Empty config file");
 	parse();
+	validate();
 }
 
 ConfigParser::~ConfigParser() { }

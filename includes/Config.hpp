@@ -24,20 +24,20 @@ struct LocationConfig {
     std::map<size_t, std::string> error_pages;
 	std::string return_url;
 
-    LocationConfig() : autoindex(false) {} 
+    LocationConfig() : autoindex(false), upload_enable(false) {} 
 };
 
 struct ServerConfig {
 	size_t listen_port;
 	std::string server_name;
+    size_t client_max_body_size;
+	std::string host;
 	std::string root;
 	std::string index;
-	std::string host;
-    size_t client_max_body_size;
     std::vector<LocationConfig> locations;
     std::map<size_t, std::string> error_pages;
 
-    ServerConfig() : listen_port(80), client_max_body_size(1048576) {} 
+    ServerConfig() : listen_port(80), client_max_body_size(1048576), host("0.0.0.0"), root("./www"), index("index.html") {}
 };
 
 class ConfigParser {
@@ -74,6 +74,7 @@ class ConfigParser {
 		void assignSizeT(size_t& dest);
 		void assignBool(bool& dest);
 		void parse();
+		void validate();
 
 	public:
 		ConfigParser(const std::string& filename);

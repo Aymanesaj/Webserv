@@ -9,16 +9,19 @@ SRC = \
 	src/ConfigParser.cpp \
 	src/HttpParser.cpp \
 	src/Router.cpp \
-	src/CGIHandler.cpp
+	src/CGIHandler.cpp \
+	src/HttpRequest.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
 INCLUDES = -Iincludes
+RED = \033[0;31m
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
+	@echo "✓ Compilation complete! \n✓ Executable: $(RED)./$(NAME)"
 
 %.o: %.cpp
 	@$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
@@ -32,3 +35,4 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
+.SECONDARY: $(OBJ)

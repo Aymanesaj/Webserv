@@ -24,10 +24,10 @@ ParseResult		HttpParser::parseRequest(const std::string& data)
                 break;
             case HEADERS:
                 result = parseHeaders();
-                // return COMPLETE; // temperory for testing
                 break;
             case BODY:
                 // result = parseBody();
+            return COMPLETE; // temporary for testing only, should be removed when body parsing is implemented
                 break;
             default:
                 break;
@@ -47,7 +47,7 @@ ParseResult HttpParser::parseRequestLine()
 
     if (pos == std::string::npos)
         return INCOMPLETE;
-    requestLine = Utils::split(buffer.substr(0, pos), ' ');
+    requestLine = Utils::split(buffer.substr(0, pos), " ");
     buffer.erase(0, pos + 2); // 2 for \r\n
     if (requestLine.size() != 3)
     {
@@ -85,18 +85,61 @@ ParseResult HttpParser::parseRequestLine()
     return ERROR;
 }
 
-
 /*
     All duplicate headers should be combined separated by comma 
     Edge cases:
-        {Host, Conten-length, Transfer-Encoding} headers can't be duplicated
+        {Host, Conten-length} headers can't be duplicated
         {Set-Cookie} headers should not be concatenated
-
 */
 ParseResult HttpParser::parseHeaders()
 {
-    std::multimap<std::string, std::string> headers;
-    
+    size_t  pos = buffer.find("\r\n\r\n");
+    if (pos == std::string::npos)
+        return INCOMPLETE;
+    std::map<std::string, std::string>  map; // headers map
+    std::vector<std::string> cookies;
+    std::vector<std::string> lines;
+    std::vector<std::string> header; // temp
+    lines = Utils::split(buffer.substr(0, pos), "\r\n");
+
+    // set default connection
+    this->request.getVersion() == "HTTP/1.1" ? map["Connection"] = "keep-alive"
+        : map["Connection"] = "close";
+
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        header = Utils::split(lines[i], ":");
+        if (std::count(lines[i].begin(), lines[i].end(), ':') != 1 && header.size() != 2)
+        {
+            this->errorCode = BAD_REQUEST;
+            return ERROR;
+        }
+        Utils::capitalizeWord(header[0]);
+        Utils::trim(header[0]);
+        Utils::trim(header[1]);
+        if ((header[0] == "Host" || header[0] == "Content-length")
+                && map.find(header[0]) != map.end())
+        {
+            this->errorCode = BAD_REQUEST;
+            return ERROR;
+        } else if (header[0] == "Set-cookie")
+            cookies.push_back(header[1]);
+        else if (map.find(header[0]) == map.end()
+            || (header[0] == "Connection" && header[1] == "keep-alive"))
+            map[header[0]] = header[1];
+        else if (header[0] != "Connection")
+            map[header[0]] = map[header[0]] + ", " + header[1];
+    }
+    if (this->request.getVersion() == "HTTP/1.1"
+        && map.find("Host") == map.end())
+    {
+        this->errorCode = BAD_REQUEST;
+        return ERROR;
+    }
+    this->request.setHeaders(map);
+    this->request.setCookies(cookies);
+    this->state = BODY;
+    return NONE;
 }
 
 const HttpRequest&    HttpParser::getRequest( void ) const

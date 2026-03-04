@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
     (void) argv;
 
     HttpParser parse;
-    ParseResult res = parse.parseRequest("GET / HTTP/1.1\r\n");
+    ParseResult res = parse.parseRequest("GET /index.html HTTP/1.1\r\nHost: otmn-server\r\n\r\n\r\n");
     const HttpRequest request = parse.getRequest();
     
     if (res != COMPLETE)
@@ -29,7 +29,16 @@ int main(int argc, char **argv) {
         std::cout << "Method : " << request.getMethod() << std::endl;
         std::cout << "Path : " << request.getPath() << std::endl;
         std::cout << "Version : " << request.getVersion() << std::endl;
-        std::cout << "*******" << std::endl;
+        std::cout << "*******" << std::endl << std::endl;
+
+        std::cout << "Request Headers:" << std::endl;
+        std::cout << "+++++++" << std::endl;
+        const std::map<std::string, std::string>& headers = request.getHeaders();
+        for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end();   ++it)
+        {
+            std::cout << it->first << ": " << it->second << std::endl;
+        }
+        std::cout << "+++++++" << std::endl;
     }
 
     return 0;

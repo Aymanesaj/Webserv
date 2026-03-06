@@ -33,6 +33,11 @@ void    HttpRequest::setCookies( const std::vector<std::string>& cookies)
     this->cookies = cookies;
 }
 
+void    HttpRequest::setBody( const std::string& body)
+{
+    this->body = body;
+}
+
 //
 const std::string&  HttpRequest::getMethod( void ) const
 {
@@ -57,4 +62,9 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders( void ) const
 const std::vector<std::string>& HttpRequest::getCookies( void ) const
 {
     return this->cookies;
+}
+
+const std::string&  HttpRequest::getBody( void ) const
+{
+    return this->body;   
 }

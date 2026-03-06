@@ -20,11 +20,13 @@ class HttpRequest
         void    setVersion( const std::string& version);
         void    setHeaders( const std::map<std::string, std::string>& headers);
         void    setCookies( const std::vector<std::string>& cookies);
-        const std::string&    getMethod( void ) const;
-        const std::string&    getPath( void ) const;
-        const std::string&    getVersion( void ) const;
-        const std::map<std::string, std::string>& getHeaders( void ) const;
-        const std::vector<std::string>& getCookies( void ) const;
+        void    setBody(const std::string& body);
+        const std::string&      getMethod( void ) const;
+        const std::string&      getPath( void ) const;
+        const std::string&      getVersion( void ) const;
+        const std::string&      getBody( void ) const;
+        const std::map<std::string, std::string>&   getHeaders( void ) const;
+        const std::vector<std::string>&             getCookies( void ) const;
 };
 
 #endif

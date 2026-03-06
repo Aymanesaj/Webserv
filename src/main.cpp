@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
     (void) argv;
 
     HttpParser parse;
-    ParseResult res = parse.parseRequest("GET /index.html HTTP/1.1\r\nHost: otmn-server\r\n\r\n\r\n");
+    ParseResult res = parse.parseRequest("GET /index.html HTTP/1.1\r\nHost: otmn\r\n\r\n\r\nwalo");
     const HttpRequest request = parse.getRequest();
     
     if (res != COMPLETE)
@@ -39,6 +39,11 @@ int main(int argc, char **argv) {
             std::cout << it->first << ": " << it->second << std::endl;
         }
         std::cout << "+++++++" << std::endl;
+        
+        // std::cout << "Buffer remaining :"<< std::endl;
+        // std::cout << "[" <<  parse.buffer << "]" << std::endl;
+        // std::cout << "+++++++" << std::endl;
+
     }
 
     return 0;

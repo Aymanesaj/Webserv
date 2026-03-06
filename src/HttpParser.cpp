@@ -3,9 +3,6 @@
 HttpParser::HttpParser()
     : state(REQUEST_LINE), expectedBodySize(0), errorCode(0)
 {
-    (void) state; // to silent -Werror for now
-    (void) expectedBodySize;
-    (void) errorCode;
 }
 
 HttpParser::~HttpParser() {}
@@ -26,8 +23,7 @@ ParseResult		HttpParser::parseRequest(const std::string& data)
                 result = parseHeaders();
                 break;
             case BODY:
-                // result = parseBody();
-            return COMPLETE; // temporary for testing only, should be removed when body parsing is implemented
+                result = parseBody();
                 break;
             default:
                 break;
@@ -37,7 +33,7 @@ ParseResult		HttpParser::parseRequest(const std::string& data)
     return result;
 }
 
-ParseResult HttpParser::parseRequestLine()
+ParseResult HttpParser::parseRequestLine( void )
 {
     std::vector<std::string>    requestLine;
     size_t                      pos = buffer.find("\r\n");
@@ -54,35 +50,30 @@ ParseResult HttpParser::parseRequestLine()
         if (requestLine.size() == 2)
             requestLine.push_back("HTTP/0.9"); // default version
         else
-            errorCode = BAD_REQUEST;
+            return setErrorCode(BAD_REQUEST);
     } else if (requestLine.size() == 3 && requestLine[2] == "HTTP/0.9")
-        errorCode = BAD_REQUEST;
+            return setErrorCode(BAD_REQUEST);
     if (!errorCode && (requestLine[0] != "GET" && requestLine[0] != "POST"
                             && requestLine[0] != "DELETE"))
-        Utils::isAllUpper(requestLine[0]) ? errorCode = METHOD_NOT_ALLOWED : errorCode = BAD_REQUEST;
+        return Utils::isAllUpper(requestLine[0]) ? setErrorCode(METHOD_NOT_ALLOWED) : setErrorCode(BAD_REQUEST);
     if (!errorCode && requestLine[1].length() > uriMaxLength)
-        errorCode = URI_TOO_LONG;
+        return setErrorCode(URI_TOO_LONG);
     if (!errorCode && requestLine[2].substr(0, p_size) != "HTTP/")
-        errorCode = BAD_REQUEST;
+            return setErrorCode(BAD_REQUEST);
     else if (!errorCode)
     {
         char *endptr = NULL;
         version = strtod(requestLine[2].substr(p_size, requestLine[2].length() - p_size).c_str(), &endptr);
         if (version < 0.9 || *endptr)
-            errorCode = BAD_REQUEST;
+            return setErrorCode(BAD_REQUEST);
         else if (version > 1.1)
-            errorCode = HTTP_VERSION_NOT_SUPPORTED;
+            return setErrorCode(HTTP_VERSION_NOT_SUPPORTED);
     }
-
-    if (errorCode == 0)
-    {
-        this->request.setMethod(requestLine[0]);
-        this->request.setPath(requestLine[1]);
-        this->request.setVersion(requestLine[2]);
-        this->state = HEADERS; // adjust parse state
-        return NONE;
-    }
-    return ERROR;
+    this->request.setMethod(requestLine[0]);
+    this->request.setPath(requestLine[1]);
+    this->request.setVersion(requestLine[2]);
+    this->state = HEADERS; // adjust parse state
+    return NONE;
 }
 
 /*
@@ -91,9 +82,9 @@ ParseResult HttpParser::parseRequestLine()
         {Host, Conten-length} headers can't be duplicated
         {Set-Cookie} headers should not be concatenated
 */
-ParseResult HttpParser::parseHeaders()
+ParseResult HttpParser::parseHeaders( void )
 {
-    size_t  pos = buffer.find("\r\n\r\n");
+    size_t  pos = buffer.find_last_of("\r\n\r\n");
     if (pos == std::string::npos)
         return INCOMPLETE;
     std::map<std::string, std::string>  map; // headers map
@@ -101,6 +92,7 @@ ParseResult HttpParser::parseHeaders()
     std::vector<std::string> lines;
     std::vector<std::string> header; // temp
     lines = Utils::split(buffer.substr(0, pos), "\r\n");
+    buffer.erase(0, pos + 1);
 
     // set default connection
     this->request.getVersion() == "HTTP/1.1" ? map["Connection"] = "keep-alive"
@@ -110,19 +102,14 @@ ParseResult HttpParser::parseHeaders()
     {
         header = Utils::split(lines[i], ":");
         if (std::count(lines[i].begin(), lines[i].end(), ':') != 1 && header.size() != 2)
-        {
-            this->errorCode = BAD_REQUEST;
-            return ERROR;
-        }
+            return setErrorCode(BAD_REQUEST);
         Utils::capitalizeWord(header[0]);
         Utils::trim(header[0]);
         Utils::trim(header[1]);
         if ((header[0] == "Host" || header[0] == "Content-length")
                 && map.find(header[0]) != map.end())
-        {
-            this->errorCode = BAD_REQUEST;
-            return ERROR;
-        } else if (header[0] == "Set-cookie")
+            return setErrorCode(BAD_REQUEST);
+        else if (header[0] == "Set-cookie")
             cookies.push_back(header[1]);
         else if (map.find(header[0]) == map.end()
             || (header[0] == "Connection" && header[1] == "keep-alive"))
@@ -132,14 +119,20 @@ ParseResult HttpParser::parseHeaders()
     }
     if (this->request.getVersion() == "HTTP/1.1"
         && map.find("Host") == map.end())
-    {
-        this->errorCode = BAD_REQUEST;
-        return ERROR;
-    }
+        return setErrorCode(BAD_REQUEST);
     this->request.setHeaders(map);
     this->request.setCookies(cookies);
     this->state = BODY;
     return NONE;
+}
+/*
+    if method == GET ignore the body
+    if Transfer-encoding exist And it's equal Chunked
+
+*/
+ParseResult HttpParser::parseBody( void )
+{
+    return COMPLETE;
 }
 
 const HttpRequest&    HttpParser::getRequest( void ) const
@@ -150,4 +143,10 @@ const HttpRequest&    HttpParser::getRequest( void ) const
 int HttpParser::getErrorCode( void ) const
 {
     return this->errorCode;
+}
+
+ParseResult HttpParser::setErrorCode(StatusCode errorCode)
+{
+    this->errorCode = errorCode;
+    return ERROR;
 }

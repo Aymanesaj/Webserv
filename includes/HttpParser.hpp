@@ -36,20 +36,21 @@ class HttpParser
             BODY,
         };
         ParseState	state;
-        std::string	buffer;
 		HttpRequest	request;
         size_t		expectedBodySize;
 		int			errorCode;
 
-		ParseResult		parseRequestLine();
-		ParseResult		parseHeaders();
-		// ParseResult		parseBody();
+		ParseResult		parseRequestLine( void );
+		ParseResult		parseHeaders( void );
+		ParseResult		parseBody( void );
 		// ParseResult		parseChunkBody();
     public:
         HttpParser();
         ~HttpParser();
+        std::string	buffer;
 		ParseResult         parseRequest(const std::string& data);
 		const HttpRequest&  getRequest( void ) const;
+        ParseResult         setErrorCode(StatusCode errorCode);
 		int				    getErrorCode( void ) const;
 };
 

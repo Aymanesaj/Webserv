@@ -13,6 +13,7 @@ enum StatusCode {
     FORBIDDEN = 403,
     NOT_FOUND = 404,
     METHOD_NOT_ALLOWED = 405,
+    CONTENT_LENGTH_REQUIRED = 411,
     PAYLOAD_TOO_LARGE = 413,
     URI_TOO_LONG = 414,
     INTERNAL_SERVER_ERROR = 500,
@@ -24,7 +25,6 @@ enum ParseResult {
 	NONE,
     INCOMPLETE,
     COMPLETE,
-    ERROR
 };
 
 class HttpParser
@@ -35,24 +35,38 @@ class HttpParser
             HEADERS,
             BODY,
         };
-        ParseState	state;
-		HttpRequest	request;
-        size_t		expectedBodySize;
-		int			errorCode;
+        enum BodyType {
+            NO_BODY,
+            CONTENT_LENGTH,
+            CHUNKED
+        };
+        enum ChunkState {
+            CHUNK_SIZE,
+            CHUNK_DATA
+        };
+        ParseState	_state;
+        std::string	_buffer;
+		HttpRequest	_request;
+        size_t		_expectedBodySize;
+        BodyType	_bodyType;
+        ChunkState  _chunkState;
+		int			_statusCode;
 
 		ParseResult		parseRequestLine( void );
 		ParseResult		parseHeaders( void );
 		ParseResult		parseBody( void );
-		// ParseResult		parseChunkBody();
+
+        void            setBodyType( const std::map<std::string, std::string>& headers );
+        ParseResult     parseLengthBody( void );
+		ParseResult		parseChunkBody( void );
+        void            resetStates( void );
     public:
         HttpParser();
         ~HttpParser();
-        std::string	buffer;
 		ParseResult         parseRequest(const std::string& data);
 		const HttpRequest&  getRequest( void ) const;
-        ParseResult         setErrorCode(StatusCode errorCode);
-		int				    getErrorCode( void ) const;
+        void                setStatusCode(StatusCode statusCode);
+		int				    getStatusCode( void ) const;
 };
-
 
 #endif

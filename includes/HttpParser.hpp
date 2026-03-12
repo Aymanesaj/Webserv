@@ -56,6 +56,7 @@ class HttpParser
 
 		ParseResult		parseRequestLine( void );
 		ParseResult		parseHeaders( void );
+        ParseResult     handleEmptyHeaders( std::map<std::string, std::string>& headers );
 		ParseResult		parseBody( void );
 
         void            setBodyType( const std::map<std::string, std::string>& headers );

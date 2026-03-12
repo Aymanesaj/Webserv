@@ -11,5 +11,10 @@
 #include <cstdlib>
 #include <algorithm>
 #include <cstring>
+#include <ctime>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 
 #endif

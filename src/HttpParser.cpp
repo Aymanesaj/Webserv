@@ -79,6 +79,14 @@ ParseResult HttpParser::parseRequestLine( void )
     return NONE;
 }
 
+ParseResult HttpParser::handleEmptyHeaders( std::map<std::string, std::string>& headers )
+{
+    headers["Connection"] = "close";
+    this->_buffer.erase(0, 2);
+    this->_request.setHeaders(headers);
+    return COMPLETE;
+}
+
 /*
     All duplicate headers should be combined separated by comma 
     Edge cases:
@@ -87,13 +95,18 @@ ParseResult HttpParser::parseRequestLine( void )
 */
 ParseResult HttpParser::parseHeaders( void )
 {
-    size_t  pos = this->_buffer.find("\r\n\r\n");
-    if (pos == std::string::npos)
-        return INCOMPLETE;
+    size_t  pos;
     std::map<std::string, std::string>  map; // headers map
     std::vector<std::string> cookies;
     std::vector<std::string> lines;
     std::pair<std::string, std::string> header;
+
+    if (this->_buffer.substr(0, 2) == "\r\n" && this->_request.getVersion() != "HTTP/1.1")
+        return handleEmptyHeaders(map);
+    
+    pos = this->_buffer.find("\r\n\r\n");
+    if (pos == std::string::npos)
+        return INCOMPLETE;
     lines = Utils::split(this->_buffer.substr(0, pos), "\r\n");
     this->_buffer.erase(0, pos + 4); // 4 for \r\n\r\n
 

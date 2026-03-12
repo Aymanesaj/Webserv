@@ -6,6 +6,7 @@ HttpResponse::HttpResponse()
     this->setMimeTypes();
     this->setHeader("Server", "Webserv");
     this->setHeader("Host", "localhost");
+    this->setHeader("Date", Utils::getCurrentDate());
 }
 
 void HttpResponse::setStatusCode(StatusCode code)
@@ -99,11 +100,12 @@ std::string    HttpResponse::errorResponse(StatusCode errorCode, std::string err
 	}
     else
     {
+        std::stringstream ss;
+        ss << this->_statusCode;// convert number to string
+        std::string statusCode_str = ss.str();
         this->setHeader("Content-type", "text/html");
-        body = "<h1>";
-        // body.append(this->_statusCode);// i need to convert the number to str first
-        body.append(" Error: " + this->_statusMessage + "</h1>");
-    }    
+        body.append("<html><h1>" + statusCode_str + " Error: " + this->_statusMessage + "</h1></html>");
+    }
     this->setBody(body);
     return this->build();
 }

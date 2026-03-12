@@ -10,10 +10,11 @@ class Utils
     public:
         static  std::vector<std::string>    split(const std::string& str,
                                                 const std::string& delimiter);
-        static  bool    isAllUpper(const std::string& str);
-        static  bool    isAllSpaces(const std::string& str);
-        static  void    capitalizeWord(std::string& word);
-        static  void    trim(std::string& str);
+        static  bool                isAllUpper(const std::string& str);
+        static  bool                isAllSpaces(const std::string& str);
+        static  void                capitalizeWord(std::string& word);
+        static  void                trim(std::string& str);
+        static  std::string         getCurrentDate( void );
 };
 
 #endif

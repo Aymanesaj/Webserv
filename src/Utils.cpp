@@ -63,3 +63,13 @@ void    Utils::capitalizeWord(std::string& word)
     for (size_t i = 1; i < word.length(); i++)
         word[i] = std::tolower(word[i]);
 }
+
+std::string Utils::getCurrentDate( void )
+{
+    time_t      now = time(0);
+    struct tm   tm_now;
+    char        buf[100];
+    gmtime_r(&now, &tm_now);
+    strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm_now);
+    return std::string(buf);
+}

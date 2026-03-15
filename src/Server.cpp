@@ -3,6 +3,12 @@
 #include "HttpParser.hpp"
 #include "HttpResponse.hpp"
 
+Server::~Server()
+{
+	for (size_t i = 0; i < fds.size(); i++)
+		close(fds[i].fd);
+}
+
 void Server::init(const std::vector<ServerConfig>& servers)
 {
 	std::map<std::pair<std::string,int>, std::vector<ServerConfig> > groups;
@@ -66,6 +72,7 @@ void Server::run()
 				else
 					readRequest(i);
 			}
+			fds[i].revents = 0;
 		}
 	}
 }

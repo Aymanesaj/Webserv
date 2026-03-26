@@ -94,6 +94,7 @@ void Server::readRequest(size_t& i)
 		return ;
 	}
 	connections[fd].append(buffer, bytes);
+	/// 3andaaaaaak
 	if (connections[fd].find("\r\n\r\n") == std::string::npos)
 		return ;
 	HttpParser parse;
@@ -102,11 +103,12 @@ void Server::readRequest(size_t& i)
 	{
 		if (parse.parseRequest(connections[fd]) == INCOMPLETE)
 			throw std::runtime_error("JUST FOR TESTING:  Request is incomplete");
+		std::cout << parse.getRequest().getMethod() << " " << parse.getRequest().getPath() << std::endl;
 	}
 	catch (const std::exception& e)
 	{
-		std::cout << "\n" << e.what() << std::endl;
-		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse.getErrorCode()), "www/error/400.html");
+		std::cout << e.what() << std::endl;
+		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse.getErrorCode()));
 		write(fd, error_resp.c_str(), error_resp.size());
 		removeClient(i);
 		return ;

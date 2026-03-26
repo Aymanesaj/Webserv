@@ -15,6 +15,7 @@ class Utils
         static  void                capitalizeWord(std::string& word);
         static  void                trim(std::string& str);
         static  std::string         getCurrentDate( void );
+        static  std::string         to_string_c98(const int& value);
 };
 
 #endif

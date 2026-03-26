@@ -24,10 +24,11 @@ class HttpResponse
 		std::string		handlePOST( const HttpRequest& request);
 		std::string		handleDELETE( const HttpRequest& request);
 		std::string		build( void ) const;
+		std::string     getErrorPage(StatusCode errorCode) const;
     public:
         HttpResponse();
 		std::string		handleRequest(const HttpRequest& request);
-		std::string		errorResponse(StatusCode errorCode, std::string errorPage);
+		std::string		errorResponse(StatusCode errorCode);
 };
 
 

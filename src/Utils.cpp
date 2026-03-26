@@ -73,3 +73,10 @@ std::string Utils::getCurrentDate( void )
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm_now);
     return std::string(buf);
 }
+
+std::string Utils::to_string_c98(const int& value)
+{
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
+}

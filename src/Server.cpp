@@ -3,6 +3,12 @@
 #include "HttpParser.hpp"
 #include "HttpResponse.hpp"
 
+Server::~Server()
+{
+	for (size_t i = 0; i < fds.size(); i++)
+		close(fds[i].fd);
+}
+
 void Server::init(const std::vector<ServerConfig>& servers)
 {
 	std::map<std::pair<std::string,int>, std::vector<ServerConfig> > groups;
@@ -15,12 +21,12 @@ void Server::init(const std::vector<ServerConfig>& servers)
 	{
 		std::string host = it->first.first;
 		int port = it->first.second;
-		// fd leaks handled inside the catch block later
 		int fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (fd < 0)
 			throw std::runtime_error("Socket failed");
 		listening_sockets.insert(fd);
-		// adding listening sockets early just because if there is an error in the next functions i'll handle leaks in the catch block
+		pollfd p = {fd, POLLIN, 0};
+		fds.push_back(p);
 		sockaddr_in addr = {};
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
@@ -37,8 +43,6 @@ void Server::init(const std::vector<ServerConfig>& servers)
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
 			throw std::runtime_error("Fcntl failed");
-		pollfd p = {fd, POLLIN, 0};
-		fds.push_back(p);
 		socket_servers[fd] = it->second;
 	}
 	run();
@@ -66,6 +70,7 @@ void Server::run()
 				else
 					readRequest(i);
 			}
+			fds[i].revents = 0;
 		}
 	}
 }
@@ -94,26 +99,22 @@ void Server::readRequest(size_t& i)
 		return ;
 	}
 	connections[fd].append(buffer, bytes);
-	/// 3andaaaaaak
-	if (connections[fd].find("\r\n\r\n") == std::string::npos)
-		return ;
-	HttpParser parse;
+	static std::map<int, HttpParser> parse;
 	HttpResponse response;
 	try
 	{
-		if (parse.parseRequest(connections[fd]) == INCOMPLETE)
-			throw std::runtime_error("JUST FOR TESTING:  Request is incomplete");
-		std::cout << parse.getRequest().getMethod() << " " << parse.getRequest().getPath() << std::endl;
+		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
+			return ;
 	}
 	catch (const std::exception& e)
 	{
-		std::cout << e.what() << std::endl;
-		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse.getErrorCode()));
+		std::cout << "\n" << e.what() << std::endl;
+		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse[fd].getErrorCode()), "www/error/400.html");
 		write(fd, error_resp.c_str(), error_resp.size());
 		removeClient(i);
 		return ;
 	}
-	std::string raw_resp = response.handleRequest(parse.getRequest());
+	std::string raw_resp = response.handleRequest(parse[fd].getRequest());
 	write(fd, raw_resp.c_str(), raw_resp.size());
 	removeClient(i);
 }

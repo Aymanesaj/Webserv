@@ -130,7 +130,7 @@ ParseResult HttpParser::parseHeaders( void )
         if ((header.first == "Host" || header.first == "Content-length")
                 && map.find(header.first) != map.end())
             setErrorCode(BAD_REQUEST);
-        else if (header.first == "Set-cookie")
+        else if (header.first == "Cookie")
             cookies.push_back(header.second);
         else if (map.find(header.first) == map.end()
             || (header.first == "Connection" && header.second == "keep-alive"))

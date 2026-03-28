@@ -168,7 +168,8 @@ ServerConfig ConfigParser::parseServer()
 			assignString(server.host);
 		else if (directive == "location")
 			server.locations.push_back(parseLocation());
-		else if (directive == "client_max_body_size") { server.client_max_body_size = std::atol(consume().c_str()); expect(";"); }
+		else if (directive == "client_max_body_size")
+			assignSizeT(server.client_max_body_size);
 		else throw std::runtime_error("Unknown directive in server block: " + directive);
 	}
 	expect("}");
@@ -188,9 +189,11 @@ void ConfigParser::parse()
 void	ConfigParser::validate(){
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
+		if (_servers[i].host == "127.0.0.1" || _servers[i].host == "localhost")
+			_servers[i].host = "0.0.0.0";
 		if (_servers[i].listen_port == 0 || _servers[i].listen_port > 65535)
 			throw std::runtime_error("Invalid listen port");
-		if (_servers[i].client_max_body_size == 0)
+		if (_servers[i].client_max_body_size <= 0)
 			throw std::runtime_error("Client max body size is > 0.");
 		std::vector<LocationConfig> &__locations = _servers[i].locations;
 		for (size_t j = 0; j < __locations.size(); ++j)

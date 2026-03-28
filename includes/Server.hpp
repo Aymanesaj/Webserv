@@ -15,6 +15,7 @@ class Server
     public:
         void init(const std::vector<ServerConfig>& servers);
         void run();
+        ~Server();
 
     private:
         void acceptClient(size_t i);

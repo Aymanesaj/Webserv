@@ -133,7 +133,6 @@ std::string     HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();
-    // this->setCookie("session_id=" + request.getSession().getId());
 
     if (method == "GET")
         response = handleGET(request);

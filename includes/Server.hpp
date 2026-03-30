@@ -3,6 +3,8 @@
 
 #include "libs.hpp"
 #include "Config.hpp"
+#include "SessionManager.hpp"
+#include "HttpParser.hpp"
 
 class Server
 {
@@ -11,7 +13,8 @@ class Server
         std::vector<pollfd> fds;
         std::map<int, std::string> connections;
         std::map<int, std::vector<ServerConfig> > socket_servers;
-
+        SessionManager      sessions_manager;
+        std::map<int, HttpParser> parse;
     public:
         void init(const std::vector<ServerConfig>& servers);
         void run();

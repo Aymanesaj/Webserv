@@ -67,7 +67,7 @@ class HttpParser
         HttpParser();
         ~HttpParser();
 		ParseResult         parseRequest(const std::string& data);
-		const HttpRequest&  getRequest( void ) const;
+		HttpRequest&        getRequest( void );
         void                setErrorCode(StatusCode statusCode);
 		int				    getErrorCode( void ) const;
 };

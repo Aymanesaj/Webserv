@@ -1,7 +1,7 @@
-#include "Server.hpp"
-#include "Config.hpp"
-#include "HttpParser.hpp"
-#include "HttpResponse.hpp"
+#include "../includes/Server.hpp"
+#include "../includes/Config.hpp"
+#include "../includes/HttpParser.hpp"
+#include "../includes/HttpResponse.hpp"
 
 Server::~Server()
 {
@@ -98,25 +98,35 @@ void Server::readRequest(size_t& i)
 		removeClient(i);
 		return ;
 	}
-	connections[fd].append(buffer, bytes);
-	static std::map<int, HttpParser> parse;
-	HttpResponse response;
+	buffer[bytes] = '\0';
+	connections[fd] = buffer;
+    static std::map<int, HttpParser> parse;
+    HttpResponse response;
+    HttpRequest& request = parse[fd].getRequest();
 	try
 	{
 		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
 			return ;
+		std::string cookie = request.getCookies();		
+		std::cout
+            << request.getMethod()
+            << " " << request.getPath()
+            << " " << request.getVersion()
+            << " host=" << request.getHeaders().at("Host") << std::endl;
 	}
 	catch (const std::exception& e)
 	{
 		std::cout << "\n" << e.what() << std::endl;
-		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse[fd].getErrorCode()), "www/error/400.html");
+		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse[fd].getErrorCode()));
 		write(fd, error_resp.c_str(), error_resp.size());
 		removeClient(i);
 		return ;
 	}
-	std::string raw_resp = response.handleRequest(parse[fd].getRequest());
+	this->sessions_manager.setUpSession(request);
+	std::string raw_resp = response.handleRequest(request);
 	write(fd, raw_resp.c_str(), raw_resp.size());
-	removeClient(i);
+	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
+		removeClient(i);
 }
 
 void Server::removeClient(size_t& i)

@@ -1,4 +1,4 @@
-#include "Config.hpp"
+#include "../includes/Config.hpp"
 
 void ConfigParser::tokenize(const std::string& filename)
 {

@@ -56,6 +56,7 @@ std::string     HttpResponse::build( void ) const
     }
     for (size_t i = 0; i < this->_cookies.size(); i++)
     {
+        // std::cout << "Set-Cookie: " << this->_cookies[i] << std::endl;
         resp << "Set-Cookie: " << this->_cookies[i] << "\r\n";
     }
     resp << "\r\n";
@@ -128,10 +129,11 @@ std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
     }
 }
 
-std::string     HttpResponse::handleRequest(const HttpRequest& request)
+std::string     HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();
+    // this->setCookie("session_id=" + request.getSession().getId());
 
     if (method == "GET")
         response = handleGET(request);
@@ -142,4 +144,9 @@ std::string     HttpResponse::handleRequest(const HttpRequest& request)
     else
         response = errorResponse(METHOD_NOT_ALLOWED);
     return response;
+}
+
+void			HttpResponse::setCookie(const std::string& cookie)
+{
+    this->_cookies.push_back(cookie);
 }

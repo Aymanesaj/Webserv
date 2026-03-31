@@ -98,9 +98,7 @@ void Server::readRequest(size_t& i)
 		removeClient(i);
 		return ;
 	}
-	buffer[bytes] = '\0';
-	connections[fd] = buffer;
-    static std::map<int, HttpParser> parse;
+	connections[fd].assign(buffer, bytes);
     HttpResponse response;
     HttpRequest& request = parse[fd].getRequest();
 	try
@@ -116,7 +114,7 @@ void Server::readRequest(size_t& i)
 	}
 	catch (const std::exception& e)
 	{
-		std::cout << "\n" << e.what() << std::endl;
+		std::cout << e.what() << " : " << static_cast<StatusCode>(parse[fd].getErrorCode()) << std::endl;
 		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse[fd].getErrorCode()));
 		write(fd, error_resp.c_str(), error_resp.size());
 		removeClient(i);
@@ -134,5 +132,6 @@ void Server::removeClient(size_t& i)
 	close(fds[i].fd);
 	connections.erase(fds[i].fd);
 	fds.erase(fds.begin() + i);
+	parse.erase(fds[i].fd);
 	--i;
 }

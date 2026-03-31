@@ -3,7 +3,8 @@
 
 SessionManager::SessionManager() {}
 
-Session::Session() : _userName("Guest"), _counter(0) {}
+Session::Session() : _userName("Guest"), _counter(0), 
+    _maxAge(60), _lastAccessTime(Utils::getCurrentTime()) {}
 
 void    SessionManager::setUpSession(HttpRequest& request)
 {
@@ -25,15 +26,23 @@ void    SessionManager::setUpSession(HttpRequest& request)
     std::string session_id;
     std::map<std::string, std::string>::iterator it = cookies.find("session_id");
     if (it != cookies.end() && this->_sessions.find(it->second) != this->_sessions.end())
+    {
         session_id = it->second;
+        Session& session = this->getSession(session_id);
+        const time_t& time_now = Utils::getCurrentTime();
+        if (std::difftime(time_now, session.getLastAccessTime()) > session.getMaxAge())
+        {
+            this->_sessions.erase(session_id);
+            session_id = this->createSession();
+        }
+        else
+            session.setLastAccessTime(time_now);
+    }
     else
         session_id = this->createSession();
     Session& session = this->getSession(session_id);
     if (session.getId().empty())
         session.setId(session_id);
-    /*
-        *   process other cookies here
-    */
     request.setSession(session);
 }
 
@@ -73,6 +82,27 @@ int Session::getCounter( void ) const
     return this->_counter;
 }
 
+const std::string& Session::getId( void ) const
+{
+    return this->_id;
+}
+
+const std::string& Session::getUserName( void) const
+{
+    return this->_userName;
+}
+
+const time_t& Session::getLastAccessTime( void ) const
+{
+    return this->_lastAccessTime;
+}
+
+int Session::getMaxAge( void ) const
+{
+    return this->_maxAge;
+}
+
+//
 void Session::incrementCounter( void )
 {
     this->_counter++;
@@ -83,7 +113,12 @@ void Session::setId(const std::string& id)
     this->_id = id;
 }
 
-std::string Session::getId( void ) const
+void Session::setUserName(const std::string& name)
 {
-    return this->_id;
+    this->_userName = name;
+}
+
+void Session::setLastAccessTime(time_t currentTime)
+{
+    this->_lastAccessTime = currentTime;
 }

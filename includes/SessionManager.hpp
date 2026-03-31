@@ -12,14 +12,19 @@ class Session
         std::string _id;// session ID
         std::string _userName;
         int         _counter;
+        int         _maxAge; // in seconds
+        time_t      _lastAccessTime;
     public:
         Session( void );
-        std::string getId( void ) const;
-        std::string getUserName( void ) const;
-        void        setId(const std::string& id);
-        void        setUserName(const std::string& name);
-        void        incrementCounter( void );
-        int         getCounter( void ) const;
+        const std::string&  getId( void ) const;
+        const std::string&  getUserName( void ) const;
+        const time_t&       getLastAccessTime( void ) const;
+        void                setId(const std::string& id);
+        void                setUserName(const std::string& name);
+        void                setLastAccessTime(time_t currentTime);
+        void                incrementCounter( void );
+        int                 getMaxAge( void ) const;
+        int                 getCounter( void ) const;
 };
 
 class HttpRequest;

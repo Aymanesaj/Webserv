@@ -1,5 +1,26 @@
 #include "../includes/Config.hpp"
 
+LocationConfig::LocationConfig() : autoindex(false), upload_enable(false) {
+	has_root = false;
+	has_return = false;
+	has_cgi_path = false;
+	has_cgi_extension = false;
+	has_index = false;
+	has_upload_store = false;
+	has_upload_enable = false;
+	has_autoindex = false;
+	has_methods = false;
+}
+
+ServerConfig::ServerConfig() : listen_port(80), client_max_body_size(1048576), host("0.0.0.0"), root("./www"), index("index.html") {
+	has_listen = false;
+	has_host = false;
+	has_server_name = false;
+	has_root = false;
+	has_index = false;
+	has_client_max_body_size = false;
+}
+
 void ConfigParser::tokenize(const std::string& filename)
 {
 	std::ifstream file(filename.c_str());
@@ -106,28 +127,29 @@ LocationConfig ConfigParser::parseLocation()
 	LocationConfig location;
 	location.path = consume();
 	expect("{");
+
 	while (!isEOF() && peek() != "}")
 	{
-		std::string	directive = consume();
-		if (directive == "root")
+		std::string directive = consume();
+		if (directive == "root" && (!location.has_root && (location.has_root = true)))
 			assignString(location.root);
-		else if (directive == "return")
+		else if (directive == "return" && (!location.has_return && (location.has_return = true)))
 			assignString(location.return_url);
-		else if (directive == "cgi_path")
+		else if (directive == "cgi_path" && (!location.has_cgi_path && (location.has_cgi_path = true)))
 			assignString(location.cgi_path);
-		else if (directive == "index")
+		else if (directive == "index" && (!location.has_index && (location.has_index = true)))
 			assignString(location.index);
-		else if (directive == "upload_store")
+		else if (directive == "upload_store" && (!location.has_upload_store && (location.has_upload_store = true)))
 			assignString(location.upload_path);
-		else if (directive == "cgi_extension")
+		else if (directive == "cgi_extension" && (!location.has_cgi_extension && (location.has_cgi_extension = true)))
 			assignString(location.cgi_ext);
 		else if (directive == "error_page")
 			handle_error_page(location);
-		else if (directive == "upload_enable")
+		else if (directive == "upload_enable" && (!location.has_upload_enable && (location.has_upload_enable = true)))
 			assignBool(location.upload_enable);
-		else if (directive == "autoindex")
+		else if (directive == "autoindex" && (!location.has_autoindex && (location.has_autoindex = true)))
 			assignBool(location.autoindex);
-		else if (directive == "methods")
+		else if (directive == "methods" && (!location.has_methods && (location.has_methods = true)))
 		{
 			while (!isEOF() && peek() != ";")
 			{
@@ -142,10 +164,10 @@ LocationConfig ConfigParser::parseLocation()
 			expect(";");
 		}
 		else
-			throw std::runtime_error("Unknown directive in location block: " + directive);
+			throw std::runtime_error("Error: " + directive);
 	}
 	expect("}");
-	return (location);
+	return location;
 }
 
 ServerConfig ConfigParser::parseServer()
@@ -154,23 +176,23 @@ ServerConfig ConfigParser::parseServer()
 	while (!isEOF() && peek() != "}")
 	{
 		std::string	directive = consume();
-		if (directive == "root")
+		if (directive == "root" && (!server.has_root && (server.has_root = true)))
 			assignString(server.root);
-		else if (directive == "index")
+		else if (directive == "index" && (!server.has_index && (server.has_index = true)))
 			assignString(server.index);
 		else if (directive == "error_page")
 			handle_error_page(server);
-		else if (directive == "listen")
+		else if (directive == "listen" && (!server.has_listen && (server.has_listen = true)))
 			assignSizeT(server.listen_port);
-		else if (directive == "server_name")
+		else if (directive == "server_name" && (!server.has_server_name && (server.has_server_name = true)))
 			assignString(server.server_name);
-		else if (directive == "host")
+		else if (directive == "host" && (!server.has_host && (server.has_host = true)))
 			assignString(server.host);
 		else if (directive == "location")
 			server.locations.push_back(parseLocation());
-		else if (directive == "client_max_body_size")
+		else if (directive == "client_max_body_size" && (!server.has_client_max_body_size && (server.has_client_max_body_size = true)))
 			assignSizeT(server.client_max_body_size);
-		else throw std::runtime_error("Unknown directive in server block: " + directive);
+		else throw std::runtime_error("Error: " + directive);
 	}
 	expect("}");
 	return (server);

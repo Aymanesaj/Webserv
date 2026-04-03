@@ -1,61 +1,37 @@
 #include "../../includes/HttpResponse.hpp"
 
-// std::string     HttpResponse::handleGET(const HttpRequest& request)
-// {
-//     (void) request;
-//     return this->build();
-// }
 
-
-std::string to_string_c98(const int& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
-
-std::string HttpResponse::handleGET(const HttpRequest& request)
+std::string     HttpResponse::handleGET(HttpRequest& request)
 {
     std::string path = "./www" + request.getPath();
-
     if (path == "./www/")
         path = "./www/index.html";
-
-    std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
-
-    if (!file.is_open())
+    
+    if (path == "./www/counter") // Example of a dynamic response using sessions, to be optimized and moved to a better place in the future
     {
-        std::ifstream err("./www/error/404.html");
-
-        std::stringstream buffer;
-
-        if (err.is_open())
-        {
-            buffer << err.rdbuf();
-            this->_body = buffer.str();
-        }
-        else
-        {
-            this->_body = "404 Not Found\n";
-        }
-
-        this->_statusCode = NOT_FOUND;
-        this->_statusMessage = "Not Found";
-
-        this->_headers["Content-Type"] = "text/html";
-        this->_headers["Content-Length"] = to_string_c98(_body.size());
-
+        Session& session = request.getSession();
+        std::string sessionId = session.getId();
+        int counter = session.getCounter();
+        session.incrementCounter();
+        
+        std::string counter_html = "<html><body><h1>Counter: " + Utils::to_string_c98(counter) + "</h1></body></html>";
+        this->setHeader("Content-type", "text/html");
+        this->setHeader("Content-Length", Utils::to_string_c98(counter_html.size()));
+        this->setHeader("Set-Cookie", "session_id=" + sessionId + "; Path=/");
+        this->setBody(counter_html);
+        this->setStatusCode(OK);
         return this->build();
-    }
-
-    std::stringstream buffer;
+    }    
+    std::ifstream   file(path.c_str(), std::ios::in | std::ios::binary);
+    if (!file.is_open())
+        return this->errorResponse(NOT_FOUND);
+    std::string         line;
+    std::stringstream   buffer;
     buffer << file.rdbuf();
     this->_body = buffer.str();
-
-    this->_statusCode = OK;
-    this->_statusMessage = "OK";
-
-    this->_headers["Content-Type"] = "text/html";
-    this->_headers["Content-Length"] = to_string_c98(_body.size());
-
+    this->setHeader("Content-type", this->getMimeType(path));
+    this->setHeader("Content-Length", Utils::to_string_c98(this->_body.size()));
+    this->setBody(this->_body);
+    this->setStatusCode(OK);
     return this->build();
 }

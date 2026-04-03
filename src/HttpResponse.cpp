@@ -56,7 +56,8 @@ std::string     HttpResponse::build( void ) const
     }
     for (size_t i = 0; i < this->_cookies.size(); i++)
     {
-        resp << "Set-Cookie: " << this->_cookies[i] << "\r\n"; 
+        // std::cout << "Set-Cookie: " << this->_cookies[i] << std::endl;
+        resp << "Set-Cookie: " << this->_cookies[i] << "\r\n";
     }
     resp << "\r\n";
     resp << _body;
@@ -85,35 +86,54 @@ std::string     HttpResponse::getMimeType(const std::string& path) const
     return this->_mimes.count(extention) ? this->_mimes.find(extention)->second : "application/octet-stream";
 }
 
-std::string    HttpResponse::errorResponse(StatusCode errorCode, std::string errorPage)
+std::string    HttpResponse::errorResponse(StatusCode errorCode)
 {
+    std::string     errorPage = getErrorPage(errorCode);
     std::ifstream   file(errorPage.c_str());
     std::string     body;
 
     this->setStatusCode(errorCode);
 	if (file.is_open())
     {
-        std::string     line;
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        body = buffer.str();
         this->setHeader("Content-type", this->getMimeType(errorPage));
-        while (std::getline(file, line))
-            body.append(line);
 	}
     else
     {
-        std::stringstream ss;
-        ss << this->_statusCode;// convert number to string
-        std::string statusCode_str = ss.str();
         this->setHeader("Content-type", "text/html");
-        body.append("<html><h1>" + statusCode_str + " Error: " + this->_statusMessage + "</h1></html>");
+        body.append("<html><h1>" + Utils::to_string_c98(this->_statusCode) + " Error: " + this->_statusMessage + "</h1></html>");
     }
     this->setBody(body);
+    this->setHeader("Content-Length", Utils::to_string_c98(this->_body.size()));
     return this->build();
 }
 
-std::string     HttpResponse::handleRequest(const HttpRequest& request)
+std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
+{
+    switch (errorCode)
+    {
+        case BAD_REQUEST: return "www/error/400.html";
+        case FORBIDDEN: return "www/error/403.html";
+        case NOT_FOUND: return "www/error/404.html";
+        case METHOD_NOT_ALLOWED: return "www/error/405.html";
+        case REQUEST_TIMEOUT: return "www/error/408.html";
+        case CONTENT_LENGTH_REQUIRED: return "www/error/411.html";
+        case CONTENT_TOO_LARGE: return "www/error/413.html";
+        case URI_TOO_LONG: return "www/error/414.html";
+        case INTERNAL_SERVER_ERROR: return "www/error/500.html";
+        case NOT_IMPLEMENTED: return "www/error/501.html";
+        case HTTP_VERSION_NOT_SUPPORTED: return "www/error/505.html";
+        default: return "www/error/400.html";
+    }
+}
+
+std::string     HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();
+    // this->setCookie("session_id=" + request.getSession().getId());
 
     if (method == "GET")
         response = handleGET(request);
@@ -122,6 +142,11 @@ std::string     HttpResponse::handleRequest(const HttpRequest& request)
     else if (method == "DELETE")
         response = handleDELETE(request);
     else
-        response = errorResponse(METHOD_NOT_ALLOWED, "www/error/405.html");
+        response = errorResponse(METHOD_NOT_ALLOWED);
     return response;
+}
+
+void			HttpResponse::setCookie(const std::string& cookie)
+{
+    this->_cookies.push_back(cookie);
 }

@@ -23,8 +23,17 @@ struct LocationConfig {
     std::vector<std::string> allowed_methods;
     std::map<size_t, std::string> error_pages;
 	std::string return_url;
+	bool has_root;
+	bool has_return;
+	bool has_cgi_path;
+	bool has_cgi_extension;
+	bool has_index;
+	bool has_upload_store;
+	bool has_upload_enable;
+	bool has_autoindex;
+	bool has_methods;
 
-    LocationConfig() : autoindex(false), upload_enable(false) {} 
+    LocationConfig();
 };
 
 struct ServerConfig {
@@ -36,8 +45,13 @@ struct ServerConfig {
 	std::string index;
     std::vector<LocationConfig> locations;
     std::map<size_t, std::string> error_pages;
-
-    ServerConfig() : listen_port(80), client_max_body_size(1048576), host("0.0.0.0"), root("./www"), index("index.html") {}
+	bool has_listen;
+	bool has_host;
+	bool has_server_name;
+	bool has_root;
+	bool has_index;
+	bool has_client_max_body_size;
+	ServerConfig();
 };
 
 class ConfigParser {

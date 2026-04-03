@@ -2,6 +2,7 @@
 #define HTTPREQUEST_HPP
 
 #include "libs.hpp"
+#include "SessionManager.hpp"
 
 class HttpRequest
 {
@@ -10,8 +11,9 @@ class HttpRequest
         std::string path;
         std::string version;
         std::map<std::string, std::string> headers;
-        std::vector<std::string> cookies;
+        std::string cookies;
         std::string body;
+        Session    *session;
     public:
         HttpRequest();
         ~HttpRequest();
@@ -19,14 +21,16 @@ class HttpRequest
         void    setPath( const std::string& Path);
         void    setVersion( const std::string& version);
         void    setHeaders( const std::map<std::string, std::string>& headers);
-        void    setCookies( const std::vector<std::string>& cookies);
+        void    setCookies( const std::string& cookies);
         void    setBody(const std::string& body);
+        void    setSession(Session& session);
         const std::string&      getMethod( void ) const;
         const std::string&      getPath( void ) const;
         const std::string&      getVersion( void ) const;
         const std::string&      getBody( void ) const;
+        const std::string&      getCookies( void ) const;
+        Session&                getSession( void );
         const std::map<std::string, std::string>&   getHeaders( void ) const;
-        const std::vector<std::string>&             getCookies( void ) const;
 };
 
 #endif

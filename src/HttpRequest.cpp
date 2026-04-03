@@ -1,6 +1,6 @@
 #include "../includes/HttpRequest.hpp"
 
-HttpRequest::HttpRequest()
+HttpRequest::HttpRequest() : session(NULL)
 {
 }
 
@@ -28,7 +28,7 @@ void    HttpRequest::setHeaders( const std::map<std::string, std::string>& heade
     this->headers = headers;
 }
 
-void    HttpRequest::setCookies( const std::vector<std::string>& cookies)
+void    HttpRequest::setCookies( const std::string& cookies)
 {
     this->cookies = cookies;
 }
@@ -36,6 +36,11 @@ void    HttpRequest::setCookies( const std::vector<std::string>& cookies)
 void    HttpRequest::setBody( const std::string& body)
 {
     this->body = body;
+}
+
+void HttpRequest::setSession(Session& session)
+{
+	this->session = &session;
 }
 
 //
@@ -59,7 +64,7 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders( void ) const
     return this->headers;
 }
 
-const std::vector<std::string>& HttpRequest::getCookies( void ) const
+const std::string& HttpRequest::getCookies( void ) const
 {
     return this->cookies;
 }
@@ -67,4 +72,9 @@ const std::vector<std::string>& HttpRequest::getCookies( void ) const
 const std::string&  HttpRequest::getBody( void ) const
 {
     return this->body;   
+}
+
+Session&  HttpRequest::getSession( void )
+{
+    return *this->session;
 }

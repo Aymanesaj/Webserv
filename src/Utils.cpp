@@ -1,4 +1,4 @@
-#include "Utils.hpp"
+#include "../includes/Utils.hpp"
 
 std::vector<std::string> Utils::split(const std::string& str,
                                       const std::string& delimiter)
@@ -72,4 +72,18 @@ std::string Utils::getCurrentDate( void )
     gmtime_r(&now, &tm_now);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm_now);
     return std::string(buf);
+}
+
+time_t  Utils::getCurrentTime( void )
+{
+    time_t      now = time(0);
+    gmtime_r(&now, NULL);
+    return now;
+}
+
+std::string Utils::to_string_c98(const int& value)
+{
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
 }

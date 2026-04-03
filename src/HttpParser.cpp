@@ -97,7 +97,6 @@ ParseResult HttpParser::parseHeaders( void )
 {
     size_t  pos;
     std::map<std::string, std::string>  map; // headers map
-    std::vector<std::string> cookies;
     std::vector<std::string> lines;
     std::pair<std::string, std::string> header;
 
@@ -127,11 +126,12 @@ ParseResult HttpParser::parseHeaders( void )
         Utils::capitalizeWord(header.first);
         Utils::trim(header.first);
         Utils::trim(header.second);
-        if ((header.first == "Host" || header.first == "Content-length")
+        if ((header.first == "Host" || header.first == "Content-length"
+            || header.first == "Cookie")
                 && map.find(header.first) != map.end())
             setErrorCode(BAD_REQUEST);
-        else if (header.first == "Set-cookie")
-            cookies.push_back(header.second);
+        else if (header.first == "Cookie")
+            this->_request.setCookies(header.second);
         else if (map.find(header.first) == map.end()
             || (header.first == "Connection" && header.second == "keep-alive"))
             map[header.first] = header.second;
@@ -142,7 +142,6 @@ ParseResult HttpParser::parseHeaders( void )
         && map.find("Host") == map.end())
         setErrorCode(BAD_REQUEST);
     this->_request.setHeaders(map);
-    this->_request.setCookies(cookies);
     this->_state = BODY;
     this->setBodyType(map);
     if (this->_buffer.compare(0, 2, "\r\n") == 0)
@@ -257,7 +256,7 @@ ParseResult HttpParser::parseChunkBody( void )
     return COMPLETE;
 }
 
-const HttpRequest&    HttpParser::getRequest( void ) const
+HttpRequest&    HttpParser::getRequest( void )
 {
     return this->_request;
 }

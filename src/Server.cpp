@@ -110,7 +110,7 @@ void Server::readRequest(size_t& i)
             << request.getMethod()
             << " " << request.getPath()
             << " " << request.getVersion()
-            << " host=" << request.getHeaders().at("Host") << std::endl;
+            << " host=" << request.getHeaders().at("Host");
 	}
 	catch (const std::exception& e)
 	{
@@ -121,7 +121,11 @@ void Server::readRequest(size_t& i)
 		return ;
 	}
 	this->sessions_manager.setUpSession(request);
+	bool isLogout = (request.getPath() == "/logout" && request.getMethod() == "POST");
 	std::string raw_resp = response.handleRequest(request);
+	if (isLogout)
+		this->sessions_manager.removeSession(request.getSession().getId());
+	std::cout << " -> " << response.getStatusCode() << std::endl;
 	write(fd, raw_resp.c_str(), raw_resp.size());
 	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
 		removeClient(i);

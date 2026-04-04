@@ -24,11 +24,15 @@ class HttpResponse
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
 		std::string		build( void ) const;
+		std::string		redirectWithCookie(const std::string& location, const std::string& cookie);
 		std::string     getErrorPage(StatusCode errorCode) const;
-    public:
+		std::string   	login(HttpRequest& request);
+		std::string     signup(HttpRequest& request);
+	public:
         HttpResponse();
 		std::string		handleRequest(HttpRequest& request);
 		std::string		errorResponse(StatusCode errorCode);
+		StatusCode		getStatusCode( void ) const;
 };
 
 

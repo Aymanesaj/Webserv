@@ -43,7 +43,6 @@ void HttpRequest::setSession(Session& session)
 	this->session = &session;
 }
 
-//
 const std::string&  HttpRequest::getMethod( void ) const
 {
     return this->method;
@@ -77,4 +76,19 @@ const std::string&  HttpRequest::getBody( void ) const
 Session&  HttpRequest::getSession( void )
 {
     return *this->session;
+}
+
+const std::string HttpRequest::getTheme( void ) const
+{
+    std::string theme_cookie = "theme-dark"; // default theme
+    size_t pos = this->cookies.find("theme=");
+    if (pos != std::string::npos)
+    {
+        size_t start = pos + 6; // length of "theme="
+        size_t end = this->cookies.find(';', start);
+        if (end == std::string::npos)
+            end = this->cookies.length();
+        theme_cookie = this->cookies.substr(start, end - start);
+    }
+    return theme_cookie;
 }

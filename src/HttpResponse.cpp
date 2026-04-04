@@ -19,6 +19,7 @@ void HttpResponse::setStatusCode(StatusCode code)
         case NO_CONTENT: this->_statusMessage = "No Content"; break;
         case SEE_OTHER: this->_statusMessage = "SEE OTHER"; break;
         case BAD_REQUEST: this->_statusMessage = "Bad Request"; break;
+        case UNAUTHORIZED: this->_statusMessage = "Unauthorized"; break;
         case FORBIDDEN: this->_statusMessage = "Forbidden"; break;
         case NOT_FOUND: this->_statusMessage = "Not Found"; break;
         case METHOD_NOT_ALLOWED: this->_statusMessage = "Method Not Allowed"; break;
@@ -56,7 +57,6 @@ std::string     HttpResponse::build( void ) const
     }
     for (size_t i = 0; i < this->_cookies.size(); i++)
     {
-        // std::cout << "Set-Cookie: " << this->_cookies[i] << std::endl;
         resp << "Set-Cookie: " << this->_cookies[i] << "\r\n";
     }
     resp << "\r\n";
@@ -133,7 +133,8 @@ std::string     HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();
-    // this->setCookie("session_id=" + request.getSession().getId());
+    this->setCookie("session_id=" + request.getSession().getId() + "; Path=/; Max-Age="
+        + Utils::to_string_c98(request.getSession().getMaxAge()) + "; HttpOnly");
 
     if (method == "GET")
         response = handleGET(request);
@@ -149,4 +150,9 @@ std::string     HttpResponse::handleRequest(HttpRequest& request)
 void			HttpResponse::setCookie(const std::string& cookie)
 {
     this->_cookies.push_back(cookie);
+}
+
+StatusCode      HttpResponse::getStatusCode( void ) const
+{
+    return this->_statusCode;
 }

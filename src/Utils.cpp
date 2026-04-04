@@ -87,3 +87,10 @@ std::string Utils::to_string_c98(const int& value)
     oss << value;
     return oss.str();
 }
+
+void    Utils::replace(std::string& str, const std::string& old, const std::string& new_str)
+{
+    size_t pos = str.find(old);
+    if (pos != std::string::npos)
+        str.replace(pos, old.size(), new_str);
+}

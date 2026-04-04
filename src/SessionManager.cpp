@@ -3,8 +3,7 @@
 
 SessionManager::SessionManager() {}
 
-Session::Session() : _userName("Guest"), _counter(0), 
-    _maxAge(60), _lastAccessTime(Utils::getCurrentTime()) {}
+Session::Session() : _maxAge(60), _lastAccessTime(Utils::getCurrentTime()) {}
 
 void    SessionManager::setUpSession(HttpRequest& request)
 {
@@ -77,9 +76,9 @@ std::string SessionManager::createSession()
     return id;
 }
 
-int Session::getCounter( void ) const
+void        SessionManager::removeSession(const std::string& sessionId)
 {
-    return this->_counter;
+    this->_sessions.erase(sessionId);
 }
 
 const std::string& Session::getId( void ) const
@@ -102,12 +101,12 @@ int Session::getMaxAge( void ) const
     return this->_maxAge;
 }
 
-//
-void Session::incrementCounter( void )
+const std::string& Session::getPassword( void ) const
 {
-    this->_counter++;
+    return this->_password;
 }
 
+//
 void Session::setId(const std::string& id)
 {
     this->_id = id;
@@ -122,3 +121,9 @@ void Session::setLastAccessTime(time_t currentTime)
 {
     this->_lastAccessTime = currentTime;
 }
+
+void Session::setPassword(const std::string& password)
+{
+    this->_password = password;
+}
+

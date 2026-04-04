@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Webserv Signup</title>
+	<style>
+		:root {
+			--bg: #0b1220;
+			--bg-soft: #111b2e;
+			--card: #121c30;
+			--text: #e5e7eb;
+			--muted: #94a3b8;
+			--accent: #38bdf8;
+			--accent-2: #22c55e;
+			--border: rgba(148, 163, 184, 0.18);
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: "Inter", "Segoe UI", Arial, sans-serif;
+			background: radial-gradient(circle at 15% 0%, #17263f 0%, var(--bg) 50%);
+			color: var(--text);
+			min-height: 100vh;
+			line-height: 1.6;
+		}
+
+		.container {
+			width: min(1100px, 92%);
+			margin: 0 auto;
+		}
+
+		header {
+			padding: 26px 0;
+			border-bottom: 1px solid var(--border);
+			background: rgba(11, 18, 32, 0.75);
+			backdrop-filter: blur(5px);
+			position: sticky;
+			top: 0;
+		}
+
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-weight: 700;
+			letter-spacing: 0.3px;
+		}
+
+		.dot {
+			width: 10px;
+			height: 10px;
+			border-radius: 999px;
+			background: linear-gradient(135deg, var(--accent), var(--accent-2));
+			box-shadow: 0 0 18px rgba(56, 189, 248, 0.7);
+		}
+
+		main {
+			min-height: calc(100vh - 84px);
+			display: grid;
+			place-items: center;
+			padding: 40px 0;
+		}
+
+		.signup-card {
+			width: min(600px, 100%);
+			min-height: 360px;
+			background: linear-gradient(180deg, rgba(18, 28, 48, 0.95), rgba(18, 28, 48, 0.75));
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 30px 24px;
+			box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+		}
+
+		h1 {
+			font-size: clamp(1.6rem, 4vw, 2rem);
+			line-height: 1.2;
+			margin-bottom: 8px;
+		}
+
+		p {
+			color: var(--muted);
+			margin-bottom: 18px;
+			font-size: 0.97rem;
+		}
+
+		form {
+			display: grid;
+			gap: 14px;
+		}
+
+		label {
+			display: grid;
+			gap: 6px;
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+
+		input {
+			background: rgba(15, 23, 42, 0.7);
+			color: var(--text);
+			border: 1px solid rgba(148, 163, 184, 0.25);
+			border-radius: 10px;
+			padding: 10px 12px;
+			font-size: 1rem;
+		}
+
+		input::placeholder {
+			color: #7d8ca3;
+		}
+
+		input:focus {
+			outline: none;
+			border-color: rgba(56, 189, 248, 0.55);
+			box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+		}
+
+		button {
+			border: 1px solid rgba(56, 189, 248, 0.45);
+			border-radius: 10px;
+			padding: 11px 14px;
+			font-size: 1rem;
+			font-weight: 700;
+			color: #e2e8f0;
+			background: #1e293b;
+			cursor: pointer;
+			transition: border-color 0.2s ease, color 0.2s ease;
+		}
+
+		button:hover {
+			border-color: rgba(56, 189, 248, 0.75);
+			color: #bae6fd;
+		}
+
+		a {
+			display: inline-block;
+			margin-top: 12px;
+			color: var(--accent);
+			font-size: 0.9rem;
+			text-decoration: none;
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div class="container brand">
+			<span class="dot"></span>
+            <a href="/"><span>Webserv</span></a>
+		</div>
+	</header>
+
+	<main class="container">
+		<section class="signup-card">
+			<h1>Create your account</h1>
+			<p>Choose a username and password to sign up.</p>
+
+			<form method="POST" action="/signup">
+				<label for="username">
+					Username
+					<input type="text" id="username" name="username" autocomplete="username" placeholder="Choose username" required>
+				</label>
+
+				<label for="password">
+					Password
+					<input type="password" id="password" name="password" autocomplete="new-password" placeholder="Choose password" required>
+				</label>
+
+				<button type="submit">Sign Up</button>
+			</form>
+			<a href="login.html">Already have an account? Log in.</a>
+		</section>
+	</main>
+</body>
+</html>

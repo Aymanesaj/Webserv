@@ -9,19 +9,22 @@
 class Server
 {
     private:
+	    std::map<std::pair<std::string,int>, std::vector<ServerConfig> > groups;
         std::set<int> listening_sockets;
         std::vector<pollfd> fds;
         std::map<int, std::string> connections;
         std::map<int, std::vector<ServerConfig> > socket_servers;
         SessionManager      sessions_manager;
         std::map<int, HttpParser> parse;
+        std::map<int, int> client_to_server_socket;
     public:
         void init(const std::vector<ServerConfig>& servers);
         void run();
         ~Server();
 
     private:
-        void acceptClient(size_t i);
+        ServerConfig&   getServer(std::string host, int fd);
+        void acceptClient(size_t& i);
         void readRequest(size_t& i);
         void removeClient(size_t& i);
 };

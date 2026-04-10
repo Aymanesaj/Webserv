@@ -3,10 +3,14 @@
 
 #include "libs.hpp"
 #include "HttpParser.hpp"
+#include "Config.hpp"
+
+struct	ServerConfig;
 
 class HttpResponse
 {
     private:
+		ServerConfig						_server;
 		StatusCode							_statusCode;
 		std::string							_statusMessage;
 		std::map<std::string, std::string>	_headers;
@@ -30,9 +34,11 @@ class HttpResponse
 		std::string     signup(HttpRequest& request);
 	public:
         HttpResponse();
+		void			setServer( ServerConfig _server );
 		std::string		handleRequest(HttpRequest& request);
 		std::string		errorResponse(StatusCode errorCode);
 		StatusCode		getStatusCode( void ) const;
+		
 };
 
 

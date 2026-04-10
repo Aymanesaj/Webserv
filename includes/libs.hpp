@@ -19,5 +19,6 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <set>
+#include <sys/stat.h>
 
 #endif

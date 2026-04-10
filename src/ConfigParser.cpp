@@ -208,6 +208,27 @@ void ConfigParser::parse()
 	}
 }
 
+LocationConfig findLocation(const std::string& uri, const ServerConfig& server)
+{
+    int best_match_length = -1;
+    int bestIndex = -1;
+
+    for (int i = 0; i < (int)server.locations.size(); i++)
+    {
+        if (uri.find(server.locations[i].path) == 0)
+        {
+            if ((int)server.locations[i].path.length() > best_match_length)
+            {
+                best_match_length = server.locations[i].path.length();
+                bestIndex = i;
+            }
+        }
+    }
+    if (bestIndex == -1)
+        throw std::runtime_error("Location not found");
+    return server.locations[bestIndex];
+}
+
 void	ConfigParser::validate(){
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{

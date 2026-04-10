@@ -129,13 +129,17 @@ std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
     }
 }
 
-std::string     HttpResponse::handleRequest(HttpRequest& request)
+std::string HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();
+    LocationConfig location = ConfigParser::findLocation(request.getPath()
+        , ConfigParser::getServers()[0]);
+        
+    if (!location.isMethodAllowed(method))
+        return errorResponse(METHOD_NOT_ALLOWED);
     this->setCookie("session_id=" + request.getSession().getId() + "; Path=/; Max-Age="
         + Utils::to_string_c98(request.getSession().getMaxAge()) + "; HttpOnly");
-
     if (method == "GET")
         response = handleGET(request);
     else if (method == "POST")
@@ -144,6 +148,7 @@ std::string     HttpResponse::handleRequest(HttpRequest& request)
         response = handleDELETE(request);
     else
         response = errorResponse(METHOD_NOT_ALLOWED);
+
     return response;
 }
 

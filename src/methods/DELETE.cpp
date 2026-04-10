@@ -3,7 +3,7 @@
 std::string     HttpResponse::handleDELETE(HttpRequest& request)
 {
     LocationConfig location = ConfigParser::findLocation(request.getPath()
-        , ConfigParser::getServers()[0]);
+        , _server);
     std::string path = location.root + location.path;
     if(path == location.root + "/")
         return errorResponse(BAD_REQUEST);

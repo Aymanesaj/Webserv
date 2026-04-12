@@ -5,9 +5,12 @@
 #include "HttpParser.hpp"
 #include "Config.hpp"
 
+struct	ServerConfig;
+
 class HttpResponse
 {
     private:
+		ServerConfig						_server;
 		StatusCode							_statusCode;
 		std::string							_statusMessage;
 		std::map<std::string, std::string>	_headers;
@@ -24,6 +27,7 @@ class HttpResponse
 		std::string		handleGET(HttpRequest& request);
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
+		std::string		handleAutoIndex(const std::string& path, HttpRequest& request);
 		std::string		build( void ) const;
 		std::string		redirectWithCookie(const std::string& location, const std::string& cookie);
 		std::string     getErrorPage(StatusCode errorCode) const;
@@ -31,6 +35,7 @@ class HttpResponse
 		std::string     signup(HttpRequest& request);
 	public:
         HttpResponse();
+		void			setServer( ServerConfig _server );
 		std::string		handleRequest(HttpRequest& request);
 		std::string		errorResponse(StatusCode errorCode);
 		StatusCode		getStatusCode( void ) const;

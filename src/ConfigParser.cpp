@@ -208,32 +208,40 @@ void ConfigParser::parse()
 	}
 }
 
-LocationConfig findLocation(const std::string& uri, const ServerConfig& server)
+LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
 {
-    int best_match_length = -1;
+	std::cout << "Finding location for URI: " <<  std::endl;
     int bestIndex = -1;
 
+	std::cout << "URI: " << uri << std::endl;
+	std::cout << "Checking location.path: " << server.locations[0].path << std::endl;
     for (int i = 0; i < (int)server.locations.size(); i++)
     {
         if (uri.find(server.locations[i].path) == 0)
         {
-            if ((int)server.locations[i].path.length() > best_match_length)
-            {
-                best_match_length = server.locations[i].path.length();
+            if (server.locations[i].path == uri)
+			{
+				std::cout << std::endl << "Exact match found: " << server.locations[i].path << std::endl;
+                return server.locations[i];
+			}
+            else if (bestIndex == -1 || server.locations[i].path.length() > server.locations[bestIndex].path.length())
+			{
+				std::cout << std::endl << "Better match found: " << server.locations[i].path << std::endl;
                 bestIndex = i;
-            }
+			}
         }
     }
     if (bestIndex == -1)
         throw std::runtime_error("Location not found");
+
     return server.locations[bestIndex];
 }
 
 void	ConfigParser::validate(){
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
-		if (_servers[i].host == "127.0.0.1" || _servers[i].host == "localhost")
-			_servers[i].host = "0.0.0.0";
+		if (_servers[i].host == "localhost")
+			_servers[i].host = "127.0.0.1";
 		if (_servers[i].listen_port == 0 || _servers[i].listen_port > 65535)
 			throw std::runtime_error("Invalid listen port");
 		if (_servers[i].client_max_body_size <= 0)
@@ -275,4 +283,4 @@ ConfigParser::ConfigParser(const std::string& filename):_index(0)
 
 ConfigParser::~ConfigParser() { }
 
-const std::vector<ServerConfig>& ConfigParser::getServers() const { return (_servers); }
+const std::vector<ServerConfig>& ConfigParser::getServers() { return (_servers); }

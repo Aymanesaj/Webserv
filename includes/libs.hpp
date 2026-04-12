@@ -20,5 +20,8 @@
 #include <poll.h>
 #include <set>
 #include <sys/stat.h>
+#include <wait.h>
+#include <dirent.h>
+
 
 #endif

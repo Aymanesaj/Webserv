@@ -34,6 +34,8 @@ struct LocationConfig {
 	bool has_methods;
 
 	bool isMethodAllowed(const std::string& method) const {
+	if (allowed_methods.empty())
+		return true;
 	for (size_t i = 0; i < allowed_methods.size(); i++) {
 		if (allowed_methods[i] == method)
 			return true;
@@ -65,7 +67,7 @@ class ConfigParser {
 	private:
 		std::vector<std::string> _tokens;
 		size_t _index;
-		static std::vector<ServerConfig> _servers; // bdalt lik hana wsh 3adi
+		std::vector<ServerConfig> _servers;
 
 		void tokenize(const std::string& filename);
 
@@ -100,7 +102,7 @@ class ConfigParser {
 	public:
 		ConfigParser(const std::string& filename);
 		~ConfigParser();
-		static const std::vector<ServerConfig>& getServers() ; // ou hta hadi 
+		const std::vector<ServerConfig>& getServers() ;
 		static LocationConfig findLocation(const std::string& uri, const ServerConfig& server);
 };
 

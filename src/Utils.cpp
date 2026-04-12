@@ -94,3 +94,11 @@ void    Utils::replace(std::string& str, const std::string& old, const std::stri
     if (pos != std::string::npos)
         str.replace(pos, old.size(), new_str);
 }
+
+bool    Utils::is_Directory(const std::string& path)
+{
+    struct stat path_stat;
+    if (stat(path.c_str(), &path_stat) != 0)
+        return false;
+    return S_ISDIR(path_stat.st_mode);
+}

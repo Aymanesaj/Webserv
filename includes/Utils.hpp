@@ -18,6 +18,7 @@ class Utils
         static  time_t              getCurrentTime( void );
         static  std::string         to_string_c98(const int& value);
         static  void                replace(std::string& str, const std::string& from, const std::string& to);
+        static  bool                is_Directory(const std::string& path);
 };
 
 #endif

@@ -129,27 +129,57 @@ std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
     }
 }
 
+std::string		HttpResponse::handleAutoIndex(const std::string& path, HttpRequest& request)
+{
+    std::string body;
+    int i = 1;
+
+    body.append("<html>\n <body>\n" + request.getPath() +  "<h1>Index of" "</h1>\n");
+    DIR*  dir = opendir(path.c_str());
+    if (!dir)
+        throw std::runtime_error("Failed to open directory");
+    struct dirent* entry;
+    std::string name;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        name = entry->d_name;
+        if (name == "." || name == "..")
+            continue;
+        body += "<a href=\"" + request.getPath() + "/" + name + "\">";
+        body += name + "</a><br>";
+        i++;
+    }
+    closedir(dir);
+    body += "</body></html>";
+    return(body);
+
+}
 std::string HttpResponse::handleRequest(HttpRequest& request)
 {
-    std::string response;
-    std::string method = request.getMethod();
-    LocationConfig location = ConfigParser::findLocation(request.getPath()
-        , ConfigParser::getServers()[0]);
-        
-    if (!location.isMethodAllowed(method))
-        return errorResponse(METHOD_NOT_ALLOWED);
-    this->setCookie("session_id=" + request.getSession().getId() + "; Path=/; Max-Age="
-        + Utils::to_string_c98(request.getSession().getMaxAge()) + "; HttpOnly");
-    if (method == "GET")
-        response = handleGET(request);
-    else if (method == "POST")
-        response = handlePOST(request);
-    else if (method == "DELETE")
-        response = handleDELETE(request);
-    else
-        response = errorResponse(METHOD_NOT_ALLOWED);
+	std::string response;
+	std::string method = request.getMethod();
+	LocationConfig location = ConfigParser::findLocation(request.getPath()
+		, _server);
+		
+	if (!location.isMethodAllowed(method))
+		return errorResponse(METHOD_NOT_ALLOWED);
+	this->setCookie("session_id=" + request.getSession().getId() + "; Path=/; Max-Age="
+		+ Utils::to_string_c98(request.getSession().getMaxAge()) + "; HttpOnly");
+	if (method == "GET")
+		response = handleGET(request);
+	else if (method == "POST")
+		response = handlePOST(request);
+	else if (method == "DELETE")
+		response = handleDELETE(request);
+	else
+		response = errorResponse(METHOD_NOT_ALLOWED);
 
-    return response;
+	return response;
+}
+
+void			HttpResponse::setServer( ServerConfig _server )
+{
+	this->_server = _server;
 }
 
 void			HttpResponse::setCookie(const std::string& cookie)

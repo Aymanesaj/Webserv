@@ -9,9 +9,31 @@ Server::~Server()
 		close(fds[i].fd);
 }
 
+
+ServerConfig& Server::getServer(const std::string hostHeader, int client_fd)
+{
+    int listening_fd = client_to_server_socket[client_fd];
+    std::vector<ServerConfig>& servers = socket_servers[listening_fd];
+    std::string hostname = hostHeader;
+
+    size_t colonPos = hostname.find(':');
+    if (colonPos != std::string::npos)
+        hostname = hostname.substr(0, colonPos);
+    for (size_t i = 0; i < hostname.size(); ++i)
+        hostname[i] = std::tolower(hostname[i]);
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        std::string serverName = servers[i].server_name;
+        for (size_t j = 0; j < serverName.size(); ++j)
+            serverName[j] = std::tolower(serverName[j]);
+        if (serverName == hostname)
+            return servers[i];
+    }
+    return servers[0];
+}
+
 void Server::init(const std::vector<ServerConfig>& servers)
 {
-	std::map<std::pair<std::string,int>, std::vector<ServerConfig> > groups;
 	for (size_t i = 0; i < servers.size(); ++i)
 	{
 		std::pair<std::string,int> key = std::make_pair(servers[i].host, servers[i].listen_port);
@@ -75,13 +97,14 @@ void Server::run()
 	}
 }
 
-void Server::acceptClient(size_t i)
+void Server::acceptClient(size_t& i)
 {
 	sockaddr client_addr = {};
 	socklen_t len = sizeof(client_addr);
 	int client_fd = accept(fds[i].fd, &client_addr, &len);
 	if (client_fd < 0)
 		return ;
+	client_to_server_socket[client_fd] = fds[i].fd;
 	int flags = fcntl(client_fd, F_GETFL, 0);
 	if (flags < 0 || fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) < 0)
 		throw std::runtime_error("Fcntl failed");
@@ -122,10 +145,10 @@ void Server::readRequest(size_t& i)
 	}
 	this->sessions_manager.setUpSession(request);
 	bool isLogout = (request.getPath() == "/logout" && request.getMethod() == "POST");
+	response.setServer(getServer(request.getHeaders().at("Host"), fd));
 	std::string raw_resp = response.handleRequest(request);
 	if (isLogout)
 		this->sessions_manager.removeSession(request.getSession().getId());
-	std::cout << " -> " << response.getStatusCode() << std::endl;
 	write(fd, raw_resp.c_str(), raw_resp.size());
 	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
 		removeClient(i);

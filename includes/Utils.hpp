@@ -2,6 +2,7 @@
 #define UTILS_HPP
 
 #include "libs.hpp"
+#include "Config.hpp"
 
 class Utils
 {
@@ -19,6 +20,8 @@ class Utils
         static  std::string         to_string_c98(const int& value);
         static  void                replace(std::string& str, const std::string& from, const std::string& to);
         static  bool                is_Directory(const std::string& path);
+        static  bool                findServer(const std::string& uri, const LocationConfig& location);
+        static  bool                DirctoryIsExists(const std::string& path);
 };
 
 #endif

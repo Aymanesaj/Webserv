@@ -9,6 +9,8 @@ std::string     HttpResponse::handleDELETE(HttpRequest& request)
         return errorResponse(BAD_REQUEST);
     if(path.find("..") != std::string::npos)
         return errorResponse(FORBIDDEN);
+    if (!location.isMethodAllowed("DELETE"))
+        return this->errorResponse(METHOD_NOT_ALLOWED);
     if (!location.upload_enable)
         return this->errorResponse(FORBIDDEN);
     std::ifstream   file(path.c_str(), std::ios::in | std::ios::binary);
@@ -17,6 +19,8 @@ std::string     HttpResponse::handleDELETE(HttpRequest& request)
     file.close();
     if (Utils::is_Directory(path))
         return errorResponse(FORBIDDEN);
+    if (access(path.c_str(), W_OK) != 0)
+        return (this->errorResponse(FORBIDDEN));
     if (remove(path.c_str()) != 0)
         return this->errorResponse(INTERNAL_SERVER_ERROR);
     this->setStatusCode(NO_CONTENT);

@@ -28,9 +28,9 @@ class HttpResponse
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
 		std::string		handleAutoIndex(const std::string& path, HttpRequest& request);
-		std::string		build( void ) const;
-		std::string		redirectWithCookie(const std::string& location, const std::string& cookie);
-		std::string     getErrorPage(StatusCode errorCode) const;
+	std::string		build( void ) const;
+	std::string		redirectWithCookie(const std::string &location, const std::string &cookie);
+	std::string     getErrorPage(StatusCode errorCode) const;
 		std::string   	login(HttpRequest& request);
 		std::string     signup(HttpRequest& request);
 	public:

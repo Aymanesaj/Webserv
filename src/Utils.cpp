@@ -102,3 +102,19 @@ bool    Utils::is_Directory(const std::string& path)
         return false;
     return S_ISDIR(path_stat.st_mode);
 }
+bool    Utils::DirctoryIsExists(const std::string& path)
+{
+    struct stat path_stat;
+    if (stat(path.c_str(), &path_stat) != 0)
+        return (false);
+    return (true);
+}
+
+bool Utils::findServer(const std::string& uri, const LocationConfig& location)
+{
+	if (uri == location.path || uri.find(location.path) == 0 || (uri[location.path.length()] == '/'))
+		return true;
+	return false;
+}
+
+

@@ -133,7 +133,7 @@ void Server::readRequest(size_t& i)
             << request.getMethod()
             << " " << request.getPath()
             << " " << request.getVersion()
-            << " host=" << request.getHeaders().at("Host");
+            << " host=" << request.getHeaders().at("Host") << std::endl;
 	}
 	catch (const std::exception& e)
 	{

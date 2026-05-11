@@ -1,4 +1,5 @@
-#include "../includes/Config.hpp"
+// #include "../includes/Config.hpp"
+#include "../includes/Utils.hpp"
 
 LocationConfig::LocationConfig() : autoindex(false), upload_enable(false) {
 	has_root = false;
@@ -208,34 +209,64 @@ void ConfigParser::parse()
 	}
 }
 
+// LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
+// {
+// 	std::cout << "Finding location for URI: " <<  std::endl;
+//     int bestIndex = -1;
+
+// 	std::cout << "URI: " << uri << std::endl;
+// 	std::cout << "Checking location.path: " << server.locations[0].path << std::endl;
+//     for (int i = 0; i < (int)server.locations.size(); i++)
+//     {
+// 		std::cout << "Checking location: " << server.locations[i].path << std::endl;
+//         if (uri.find(server.locations[i].path) == 0)
+//         {
+//             if (server.locations[i].path == uri)
+// 			{
+// 				std::cout << std::endl << "Exact match found: " << server.locations[i].path << std::endl;
+//                 return server.locations[i];
+// 			}
+//             else if (bestIndex == -1 || server.locations[i].path.length() > server.locations[bestIndex].path.length())
+// 			{
+// 				std::cout << std::endl << "Better match found: " << server.locations[i].path << std::endl;
+//                 bestIndex = i;
+// 			}
+//         }
+//     }
+//     if (bestIndex == -1)
+//         throw std::runtime_error("Location not found");
+
+//     return server.locations[bestIndex];
+// }
+
+
 LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
 {
-	std::cout << "Finding location for URI: " <<  std::endl;
     int bestIndex = -1;
-
-	std::cout << "URI: " << uri << std::endl;
-	std::cout << "Checking location.path: " << server.locations[0].path << std::endl;
-    for (int i = 0; i < (int)server.locations.size(); i++)
-    {
-        if (uri.find(server.locations[i].path) == 0)
-        {
-            if (server.locations[i].path == uri)
+	
+	// std::cout << "Finding location for URI: " << uri << std::endl;
+	for (int i = 0; i < (int)server.locations.size(); i++)
+	{
+		// std::cout << "Checking location: " << server.locations[i].path << std::endl;
+		if (Utils::findServer(uri, server.locations[i]))
+		{
+			// std::cout << "Found potential match: " << server.locations[i].path << std::endl;
+			if (server.locations[i].path == uri)
 			{
-				std::cout << std::endl << "Exact match found: " << server.locations[i].path << std::endl;
-                return server.locations[i];
+				// std::cout << "Exact match found: " << server.locations[i].path << std::endl;
+				return server.locations[i];
 			}
-            else if (bestIndex == -1 || server.locations[i].path.length() > server.locations[bestIndex].path.length())
-			{
-				std::cout << std::endl << "Better match found: " << server.locations[i].path << std::endl;
-                bestIndex = i;
-			}
-        }
-    }
-    if (bestIndex == -1)
-        throw std::runtime_error("Location not found");
+			else if ((bestIndex == -1 || server.locations[i].path.length() > server.locations[bestIndex].path.length()))
+				bestIndex = i;
+		}
+	}
+	if (bestIndex == -1)
+		throw std::runtime_error("Location not found");
+	return server.locations[bestIndex];
 
-    return server.locations[bestIndex];
 }
+
+
 
 void	ConfigParser::validate(){
 	for (size_t i = 0; i < _servers.size(); ++i)

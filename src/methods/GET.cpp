@@ -35,24 +35,23 @@
 std::string     HttpResponse::handleGET(HttpRequest& request)
 {
 	LocationConfig location = ConfigParser::findLocation(request.getPath(), _server);
-	// std::cout << std::endl << "\'\'request.getPath()'\'" << request.getPath() << "\'\'\'\'\'\'\'\'" << std::endl;
-	// std::cout << std::endl << "\'\'location.path'\'" << location.path << "\'\'\'\'\'\'\'\'" << std::endl;
 	std::string path = location.root + request.getPath();
 	if(path == location.root + "/")
 		path += location.index;
-    if (Utils::is_Directory(path))
+	if (Utils::is_Directory(path))
 	{
 		try
 		{
 			if (location.autoindex)
-				handleAutoIndex(path, request);
+				return (handleAutoIndex(path, request)); // ← return here
+			else
+				return (this->errorResponse(FORBIDDEN)); // ← no autoindex = 403
 		}
 		catch(const std::exception& e)
 		{
 			std::cerr << e.what() << '\n';
 			return (this->errorResponse(INTERNAL_SERVER_ERROR));
 		}
-	
 	}
 	Session& session = request.getSession();
 	if (request.getPath() == "/profile.html" && session.getUserName().empty())

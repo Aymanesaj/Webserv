@@ -244,7 +244,6 @@ LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerCo
 {
     int bestIndex = -1;
 	
-	// std::cout << "Finding location for URI: " << uri << std::endl;
 	for (int i = 0; i < (int)server.locations.size(); i++)
 	{
 		// std::cout << "Checking location: " << server.locations[i].path << std::endl;

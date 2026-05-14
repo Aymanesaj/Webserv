@@ -27,6 +27,13 @@ class HttpResponse
 		std::string		handleGET(HttpRequest& request);
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
+		std::string 	validateUpload(HttpRequest& request,
+						LocationConfig& location, std::string& content_type);
+		std::string 	handleUrlEncoded(HttpRequest& request, LocationConfig& location);
+		std::string 	handleMultipart(HttpRequest& request,
+                        LocationConfig& location, const std::string& content_type);
+		std::string 	handleRawBody(HttpRequest& request,
+                        LocationConfig& location, const std::string& content_type);
 		std::string		handleAutoIndex(const std::string& path, HttpRequest& request);
 	std::string		build( void ) const;
 	std::string		redirectWithCookie(const std::string &location, const std::string &cookie);

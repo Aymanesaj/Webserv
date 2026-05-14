@@ -171,11 +171,10 @@ std::string HttpResponse::handleRequest(HttpRequest& request)
 		response = handlePOST(request);
 	else if (method == "DELETE")
 		response = handleDELETE(request);
-	else
-		response = errorResponse(METHOD_NOT_ALLOWED);
 
 	return response;
 }
+
 
 void			HttpResponse::setServer( ServerConfig _server )
 {

@@ -114,21 +114,13 @@ std::string HttpResponse::redirectWithCookie(const std::string &location, const 
 //     return this->build();
 // }
 
-std::string HttpResponse::handlePOST(HttpRequest& request)
+std::string HttpResponse::validateUpload(HttpRequest& request, LocationConfig& location, std::string& content_type)
 {
-    LocationConfig location = ConfigParser::findLocation(request.getPath(), _server);
     size_t max_size = 10 * 1024 * 1024;
-    std::vector<std::string> parts, kv;
-    std::string key, value, all_path, boundary, filename, full_data;
-    std::map<std::string, std::string> my_map;
-    std::map<std::string, std::string>::iterator help;
-    size_t num;
-    std::string content_type = "";
 
     if (request.getHeaders().find("Content-Type") != request.getHeaders().end())
         content_type = request.getHeaders().at("Content-Type");
-    std::cout << "alialilaila" << std::endl;
-    if (location.upload_enable == false)
+    if (!location.upload_enable)
         return (this->errorResponse(FORBIDDEN));
     if (request.getHeaders().find("Content-Length") == request.getHeaders().end())
         return (this->errorResponse(CONTENT_LENGTH_REQUIRED));
@@ -140,20 +132,27 @@ std::string HttpResponse::handlePOST(HttpRequest& request)
         return (this->errorResponse(INTERNAL_SERVER_ERROR));
     if (!Utils::DirctoryIsExists(location.upload_path) || !Utils::is_Directory(location.upload_path))
         return (this->errorResponse(INTERNAL_SERVER_ERROR));
+    return ("");
+}
 
-    if (content_type.find("application/x-www-form-urlencoded") != std::string::npos)
+std::string HttpResponse::handleUrlEncoded(HttpRequest& request, LocationConfig& location)
+{
+    std::map<std::string, std::string> my_map;
+    std::map<std::string, std::string>::iterator help;
+    std::vector<std::string> parts, kv;
+    std::string key, value, all_path;
+
+    parts = Utils::split(request.getBody(), "&");
+    for (size_t i = 0; i < parts.size(); i++)
     {
-        parts = Utils::split(request.getBody(), "&");
-        for (size_t i = 0; i < parts.size(); i++)
+        kv = Utils::split(parts[i], "=");
+        if (kv.size() == 2)
         {
-            kv = Utils::split(parts[i], "=");
-            if (kv.size() == 2)
-            {
-                key   = kv[0];
-                value = kv[1];
-                my_map[key] = value;
-            }
+            key   = kv[0];
+            value = kv[1];
+            my_map[key] = value;
         }
+    }
         all_path = location.upload_path + "/save.txt";
         std::ofstream file(all_path.c_str(), std::ios::binary);
         if (!file.is_open())
@@ -164,10 +163,16 @@ std::string HttpResponse::handlePOST(HttpRequest& request)
         this->setStatusCode(CREATED);
         this->setHeader("Content-Type", "text/html");
         this->setBody("<html><body><h1>201 Created!</h1></body></html>");
-    }
-    else if (content_type.find("multipart/form-data") != std::string::npos)
-    {
-        if (content_type.find("boundary=") == std::string::npos)
+        return (this->build());
+}
+
+std::string HttpResponse::handleMultipart(HttpRequest& request, LocationConfig& location, const std::string& content_type)
+{
+    size_t num;
+    std::string boundary , filename, full_data;
+    std::vector<std::string> parts;
+
+    if (content_type.find("boundary=") == std::string::npos)
             return (this->errorResponse(BAD_REQUEST));
         boundary = content_type.substr(content_type.find("boundary=") + 9);
         if (boundary.empty())
@@ -208,42 +213,61 @@ std::string HttpResponse::handlePOST(HttpRequest& request)
                 this->setBody("<html><body><h1>201 Created!</h1></body></html>");
             }
         }
-    }
-    else
+        return(this->build());
+}
+
+std::string HttpResponse::handleRawBody(HttpRequest& request, LocationConfig& location, const std::string& content_type)
+{
+    std::string filename ,req_path = request.getPath();
+    size_t slash = req_path.rfind("/");
+
+    if (slash != std::string::npos && slash != req_path.size() - 1)
+        filename = req_path.substr(slash + 1);
+
+    if (filename.empty())
     {
-        std::string req_path = request.getPath();
-        size_t slash = req_path.rfind("/");
-
-        if (slash != std::string::npos && slash != req_path.size() - 1)
-            filename = req_path.substr(slash + 1);
-
-        if (filename.empty())
-        {
-            if (content_type.find("image/jpeg") != std::string::npos)
-                filename = "upload.jpg";
-            else if (content_type.find("image/png") != std::string::npos)
-                filename = "upload.png";
-            else if (content_type.find("application/json") != std::string::npos)
-                filename = "upload.json";
-            else if (content_type.find("text/plain") != std::string::npos)
-                filename = "upload.txt";
-            else if (content_type.find("application/pdf") != std::string::npos)
-                filename = "upload.pdf";
-        }
-
-        if (filename.empty())
-            filename = "upload.bin";
-
-        filename = location.upload_path + "/" + filename;
-        std::ofstream file(filename.c_str(), std::ios::binary);
-        if (!file.is_open())
-            return (this->errorResponse(INTERNAL_SERVER_ERROR));
-        file.write(request.getBody().c_str(), request.getBody().size());
-        file.close();
-        this->setStatusCode(CREATED);
-        this->setHeader("Content-Type", "text/html");
-        this->setBody("<html><body><h1>201 Created!</h1></body></html>");
+        if (content_type.find("image/jpeg") != std::string::npos)
+            filename = "upload.jpg";
+        else if (content_type.find("image/png") != std::string::npos)
+            filename = "upload.png";
+        else if (content_type.find("application/json") != std::string::npos)
+            filename = "upload.json";
+        else if (content_type.find("text/plain") != std::string::npos)
+            filename = "upload.txt";
+        else if (content_type.find("application/pdf") != std::string::npos)
+            filename = "upload.pdf";
     }
+
+    if (filename.empty())
+        filename = "upload.bin";
+
+    filename = location.upload_path + "/" + filename;
+    std::ofstream file(filename.c_str(), std::ios::binary);
+    if (!file.is_open())
+        return (this->errorResponse(INTERNAL_SERVER_ERROR));
+    file.write(request.getBody().c_str(), request.getBody().size());
+    file.close();
+    this->setStatusCode(CREATED);
+    this->setHeader("Content-Type", "text/html");
+    this->setBody("<html><body><h1>201 Created!</h1></body></html>");
+    return (this->build());
+}
+
+std::string HttpResponse::handlePOST(HttpRequest& request)
+{
+    LocationConfig location = ConfigParser::findLocation(request.getPath(), _server);
+    std::string valid;
+    std::string content_type = "";
+
+    valid = validateUpload(request, location, content_type);
+    if (!valid.empty())
+        return (valid);
+    if (content_type.find("application/x-www-form-urlencoded") != std::string::npos)
+        return (handleUrlEncoded(request, location));
+    else if (content_type.find("multipart/form-data") != std::string::npos)
+        return (handleMultipart(request, location, content_type));
+    else
+        return(handleRawBody(request, location, content_type));
 
     return (this->build());
 }

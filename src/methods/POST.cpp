@@ -2,8 +2,13 @@
 
 /* session and cookie handling */
 /* * */
-static std::string getData(const std::string& body, const std::string& key)
+static std::string getData(int body_fd, const std::string& key)
 {
+    char buffer[1024];
+    ssize_t bytes = read(body_fd, buffer, sizeof(buffer));
+    if (bytes <= 0)
+        return "";
+    std::string body(buffer, bytes);
     std::vector<std::string> pairs = Utils::split(body, "&");
     std::vector<std::string> kv;
     for (size_t i = 0; i < pairs.size(); i++) {
@@ -44,7 +49,7 @@ std::string   HttpResponse::redirectWithCookie(const std::string& location, cons
 
 std::string   HttpResponse::login(HttpRequest& request)
 {
-    std::string body = request.getBody();
+    int body = request.getBody();
     Session& session = request.getSession();
     
     std::string username = getData(body, "username");
@@ -66,7 +71,7 @@ std::string   HttpResponse::login(HttpRequest& request)
 
 std::string   HttpResponse::signup(HttpRequest& request)
 {
-    std::string body = request.getBody();
+    int body = request.getBody();
     Session& session = request.getSession();
     
     std::string username = getData(body, "username");

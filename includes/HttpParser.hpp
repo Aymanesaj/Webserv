@@ -51,6 +51,7 @@ class HttpParser
         std::string	_buffer;
 		HttpRequest	_request;
         size_t		_expectedBodySize;
+        size_t      _receivedBodySize;
         BodyType	_bodyType;
         ChunkState  _chunkState;
 		int			_errorCode;

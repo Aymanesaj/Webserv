@@ -94,3 +94,10 @@ void    Utils::replace(std::string& str, const std::string& old, const std::stri
     if (pos != std::string::npos)
         str.replace(pos, old.size(), new_str);
 }
+
+int Utils::createTempFile( void )
+{
+    char temp[] = "/tmp/webserv_temp_XXXXXX";
+    int fd = mkstemp(temp);
+    return fd;
+}

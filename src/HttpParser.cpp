@@ -152,6 +152,12 @@ ParseResult HttpParser::parseHeaders( void )
 ParseResult HttpParser::parseBody( void )
 {
     ParseResult result = COMPLETE;
+    if (this->_bodyType != NO_BODY && this->_request.getBody() == -1)
+    {
+        this->_request.setBodyFile();
+        if (this->_request.getBody() == -1)
+            setErrorCode(INTERNAL_SERVER_ERROR);
+    }
     switch (this->_bodyType)
     {
         case NO_BODY:
@@ -168,11 +174,11 @@ ParseResult HttpParser::parseBody( void )
 
 void    HttpParser::setBodyType( const std::map<std::string, std::string>& headers )
 {
-    if (this->_request.getMethod() != "POST")
-        this->_bodyType = NO_BODY;
-    else if (headers.find("Transfer-encoding") != headers.end())
+    if (headers.find("Transfer-encoding") != headers.end())
     {
-        if (headers.find("Transfer-encoding")->second == "chunked")
+        if (this->_request.getMethod() != "POST")
+            setErrorCode(BAD_REQUEST);
+        else if (headers.find("Transfer-encoding")->second == "chunked")
         {
             this->_bodyType = CHUNKED;
             this->_chunkState = CHUNK_SIZE;
@@ -184,7 +190,7 @@ void    HttpParser::setBodyType( const std::map<std::string, std::string>& heade
     {
         char *endptr = NULL;
         long contentLength = strtol(headers.find("Content-length")->second.c_str(), &endptr, 10);
-        if (contentLength < 0 || *endptr) // i need to add a max content length check here
+        if (this->_request.getMethod() != "POST" || contentLength < 0 || *endptr)
             setErrorCode(BAD_REQUEST);
         else
         {
@@ -192,31 +198,26 @@ void    HttpParser::setBodyType( const std::map<std::string, std::string>& heade
             this->_expectedBodySize = static_cast<size_t>(contentLength);
         }
     }
-    else
+    else if (this->_request.getMethod() == "POST")
         setErrorCode(CONTENT_LENGTH_REQUIRED);
+    else
+        this->_bodyType = NO_BODY;
 }
 
 ParseResult HttpParser::parseLengthBody( void )
 {
-    if (this->_buffer.length() < _expectedBodySize)
-        return INCOMPLETE;
-    this->_request.setBody(this->_buffer.substr(0, _expectedBodySize));
-    if (this->_buffer.compare(_expectedBodySize, 2, "\r\n") == 0)//if request has trailing empty line
-        this->_buffer.erase(0, _expectedBodySize + 2);
-    else
-        this->_buffer.erase(0, _expectedBodySize);
-    return COMPLETE;
+    this->_request.setBody(this->_buffer.substr(0, this->_expectedBodySize));
+    this->_receivedBodySize += this->_buffer.length();
+    this->_buffer.clear();
+    return this->_receivedBodySize < this->_expectedBodySize ? INCOMPLETE : COMPLETE;
 }
 
 ParseResult HttpParser::parseChunkBody( void )
 {
-    size_t      pos = this->_buffer.find("\r\n0\r\n");
-    if (pos == std::string::npos)
-        return INCOMPLETE;
+    size_t      pos;
     long        chunkSize;
     char*       endptr;
     std::string tmp;
-    std::string body;
     ParseResult result = NONE;
     while (true)
     {
@@ -239,11 +240,12 @@ ParseResult HttpParser::parseChunkBody( void )
             case CHUNK_DATA:
                 pos = this->_buffer.find("\r\n");
                 if (pos == std::string::npos)
-                    return INCOMPLETE;
+                    pos = this->_buffer.length();
                 tmp = this->_buffer.substr(0, pos);
                 if (static_cast<size_t>(chunkSize) != tmp.length())
                     setErrorCode(BAD_REQUEST);
-                body += tmp;
+                this->_request.setBody(tmp);
+                this->_receivedBodySize += tmp.length();
                 this->_buffer.erase(0, pos + 2);
                 this->_chunkState = CHUNK_SIZE;
             break;
@@ -252,7 +254,6 @@ ParseResult HttpParser::parseChunkBody( void )
     }
     if (result == COMPLETE && this->_buffer.compare(0, 2, "\r\n") == 0) // if request has trailing empty line
         this->_buffer.erase(0, 2);
-    this->_request.setBody(body);
     return COMPLETE;
 }
 
@@ -276,7 +277,9 @@ void    HttpParser::resetStates( void )
 {
     this->_state = REQUEST_LINE;
     this->_expectedBodySize = 0;
+    this->_receivedBodySize = 0;
     this->_bodyType = NO_BODY;
     this->_chunkState = CHUNK_SIZE;
     this->_errorCode = 0;
+    lseek(this->_request.getBody(), 0, SEEK_SET);
 }

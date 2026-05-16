@@ -1,11 +1,16 @@
 #include "../includes/HttpRequest.hpp"
 
-HttpRequest::HttpRequest() : session(NULL)
+HttpRequest::HttpRequest() : session(NULL), body_file(-1)
 {
 }
 
 HttpRequest::~HttpRequest()
 {
+    if (this->body_file != -1)
+    {
+        close(this->body_file);
+        unlink("/tmp/webserv_temp_XXXXXX");
+    }
 }
 
 void    HttpRequest::setMethod(const std::string& method)
@@ -35,7 +40,7 @@ void    HttpRequest::setCookies( const std::string& cookies)
 
 void    HttpRequest::setBody( const std::string& body)
 {
-    this->body = body;
+    write(this->body_file, body.c_str(), body.length());
 }
 
 void HttpRequest::setSession(Session& session)
@@ -68,9 +73,9 @@ const std::string& HttpRequest::getCookies( void ) const
     return this->cookies;
 }
 
-const std::string&  HttpRequest::getBody( void ) const
+int HttpRequest::getBody( void ) const
 {
-    return this->body;   
+    return this->body_file;
 }
 
 Session&  HttpRequest::getSession( void )
@@ -91,4 +96,10 @@ const std::string HttpRequest::getTheme( void ) const
         theme_cookie = this->cookies.substr(start, end - start);
     }
     return theme_cookie;
+}
+
+void HttpRequest::setBodyFile( void )
+{
+    int fd = Utils::createTempFile();
+    this->body_file = fd;
 }

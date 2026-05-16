@@ -38,7 +38,6 @@ class HttpResponse
 		std::string		handleRequest(HttpRequest& request);
 		std::string		errorResponse(StatusCode errorCode);
 		StatusCode		getStatusCode( void ) const;
-		
 };
 
 

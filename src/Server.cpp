@@ -120,6 +120,11 @@ void Server::readRequest(size_t& i)
 	if (bytes <= 0){
 		removeClient(i);
 		return ;
+	} else if (static_cast<unsigned char>(buffer[0]) == 0x16)
+	{
+		std::cerr << "TLS Handshake received : BUT HTTPS NOT SUPPORTED" << std::endl;
+		removeClient(i);
+		return ;
 	}
 	connections[fd].assign(buffer, bytes);
     HttpResponse response;
@@ -156,9 +161,10 @@ void Server::readRequest(size_t& i)
 
 void Server::removeClient(size_t& i)
 {
-	close(fds[i].fd);
-	connections.erase(fds[i].fd);
+	int fd = fds[i].fd;
+	close(fd);
+	connections.erase(fd);
 	fds.erase(fds.begin() + i);
-	parse.erase(fds[i].fd);
-	--i;
+	parse.erase(fd);
+	if (i > 0) --i;
 }

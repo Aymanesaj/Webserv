@@ -92,3 +92,18 @@ const std::string HttpRequest::getTheme( void ) const
     }
     return theme_cookie;
 }
+
+const std::string& HttpRequest::getQuery( void ) const
+{
+    size_t pos = this->path.find('?');
+    if (pos != std::string::npos)
+        return this->path.substr(pos + 1);
+    return "";
+}
+
+const std::string& HttpRequest::getContentType( void ) const
+{
+    if (this->headers.find("Content-Type") != this->headers.end())
+        return this->headers.at("Content-Type");
+    return "";
+}

@@ -30,6 +30,8 @@ class HttpRequest
         const std::string&      getBody( void ) const;
         const std::string&      getCookies( void ) const;
         const std::string       getTheme( void ) const;
+        const std::string&       getQuery( void ) const;
+        const std::string&       getContentType( void ) const;
         Session&                getSession( void );
         const std::map<std::string, std::string>&   getHeaders( void ) const;
 };

@@ -12,84 +12,75 @@ std::string HttpResponse::redirectWithCookie(const std::string &location, const 
 	return this->build();
 }
 
-// static std::string getData(const std::string& body, const std::string& key)
-// {
-//     std::vector<std::string> pairs = Utils::split(body, "&");
-//     std::vector<std::string> kv;
-//     for (size_t i = 0; i < pairs.size(); i++) {
-//         kv = Utils::split(pairs[i], "=");
-//         if (kv.size() == 2 && kv[0] == key)
-//             return kv[1];
-//     }
-//     return "";
-// }
+static std::string getData(const std::string& body, const std::string& key)
+{
+    std::vector<std::string> pairs = Utils::split(body, "&");
+    std::vector<std::string> kv;
+    for (size_t i = 0; i < pairs.size(); i++) {
+        kv = Utils::split(pairs[i], "=");
+        if (kv.size() == 2 && kv[0] == key)
+            return kv[1];
+    }
+    return "";
+}
 
-// static std::string loadLoginPage(bool showError)
-// {
-//     std::ifstream file("./www/login.html", std::ios::in | std::ios::binary);
-//     if (!file.is_open())
-//         return "";
+static std::string loadLoginPage(bool showError)
+{
+    std::ifstream file("./www/login.html", std::ios::in | std::ios::binary);
+    if (!file.is_open())
+        return "";
 
-//     std::stringstream buffer;
-//     buffer << file.rdbuf();
-//     std::string html = buffer.str();
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string html = buffer.str();
 
-//     if (showError)
-//     {
-//         size_t pos = html.find("error hidden");
-//         if (pos != std::string::npos)
-//             html.erase(pos + 5, 7);
-//     }
-//     return html;
-// }
+    if (showError)
+    {
+        size_t pos = html.find("error hidden");
+        if (pos != std::string::npos)
+            html.erase(pos + 5, 7);
+    }
+    return html;
+}
 
-// std::string   HttpResponse::redirectWithCookie(const std::string& location, const std::string& cookie)
-// {
-//     if (!cookie.empty())
-//         this->setCookie(cookie);
-//     this->setStatusCode(SEE_OTHER);
-//     this->setHeader("Location", location);
-//     return this->build();
-// }
-
-// std::string   HttpResponse::login(HttpRequest& request)
-// {
-//     std::string body = request.getBody();
-//     Session& session = request.getSession();
+std::string   HttpResponse::login(HttpRequest& request)
+{
+    std::string body = request.getBody();
+    Session& session = request.getSession();
     
-//     std::string username = getData(body, "username");
-//     std::string password = getData(body, "password");
+    std::string username = getData(body, "username");
+    std::string password = getData(body, "password");
 
-//     if (username != session.getUserName() || password != session.getPassword())
-//     {
-//         this->setStatusCode(UNAUTHORIZED);
-//         std::string loginPage = loadLoginPage(true); // Load the login page with an error message
-//         if (loginPage.empty())
-//             return "<html><body><h1>Invalid username or password.</h1></body></html>";
-//         return loginPage;
-//     }
+    if (username != session.getUserName() || password != session.getPassword())
+    {
+        this->setStatusCode(UNAUTHORIZED);
+        std::string loginPage = loadLoginPage(true); // Load the login page with an error message
+        if (loginPage.empty())
+            return "<html><body><h1>Invalid username or password.</h1></body></html>";
+        return loginPage;
+    }
 
-//     this->setStatusCode(SEE_OTHER);
-//     this->setHeader("Location", "/profile.html");
-//     return "";
-// }
+    this->setStatusCode(SEE_OTHER);
+    this->setHeader("Location", "/profile.html");
+    return "";
+}
 
-// std::string   HttpResponse::signup(HttpRequest& request)
-// {
-//     std::string body = request.getBody();
-//     Session& session = request.getSession();
+std::string   HttpResponse::signup(HttpRequest& request)
+{
+    std::string body = request.getBody();
+    Session& session = request.getSession();
     
-//     std::string username = getData(body, "username");
-//     std::string password = getData(body, "password");
+    std::string username = getData(body, "username");
+    std::string password = getData(body, "password");
 
-//     session.setUserName(username);
-//     session.setPassword(password);
+    session.setUserName(username);
+    session.setPassword(password);
 
-//     this->setStatusCode(SEE_OTHER);
-//     this->setHeader("Location", "/login.html");
-//     return "";
-// }
-// /* * */
+    this->setStatusCode(SEE_OTHER);
+    this->setHeader("Location", "/login.html");
+    return "";
+}
+/* * */
 
 // std::string     HttpResponse::handlePOST(HttpRequest& request)
 // {
@@ -116,7 +107,6 @@ std::string HttpResponse::redirectWithCookie(const std::string &location, const 
 
 std::string HttpResponse::validateUpload(HttpRequest& request, LocationConfig& location, std::string& content_type)
 {
-    size_t max_size = 10 * 1024 * 1024;
 
     if (request.getHeaders().find("Content-Type") != request.getHeaders().end())
         content_type = request.getHeaders().at("Content-Type");
@@ -126,7 +116,7 @@ std::string HttpResponse::validateUpload(HttpRequest& request, LocationConfig& l
         return (this->errorResponse(CONTENT_LENGTH_REQUIRED));
     if (request.getBody().empty())
         return (this->errorResponse(BAD_REQUEST));
-    if (request.getBody().size() > max_size)
+    if (request.getBody().size() > _server.client_max_body_size)
         return (this->errorResponse(CONTENT_TOO_LARGE));
     if (location.upload_path.empty())
         return (this->errorResponse(INTERNAL_SERVER_ERROR));
@@ -258,16 +248,33 @@ std::string HttpResponse::handlePOST(HttpRequest& request)
     LocationConfig location = ConfigParser::findLocation(request.getPath(), _server);
     std::string valid;
     std::string content_type = "";
+    std::string response_html;
 
-    valid = validateUpload(request, location, content_type);
-    if (!valid.empty())
-        return (valid);
-    if (content_type.find("application/x-www-form-urlencoded") != std::string::npos)
-        return (handleUrlEncoded(request, location));
-    else if (content_type.find("multipart/form-data") != std::string::npos)
-        return (handleMultipart(request, location, content_type));
-    else
-        return(handleRawBody(request, location, content_type));
+
+    if (request.getPath() == "/login")
+        response_html = this->login(request);
+    else if (request.getPath() == "/signup")
+        response_html = this->signup(request);
+    else if (request.getPath() == "/logout")
+        return this->redirectWithCookie("/login.html", "session_id=; Path=/; Max-Age=0; HttpOnly");
+    else if (request.getPath() == "/toggle-theme")
+    {
+        const std::string theme_cookie = request.getTheme();
+        std::string new_theme = (theme_cookie == "theme-light") ? "theme-dark" : "theme-light";
+        return this->redirectWithCookie("/", "theme=" + new_theme + "; Path=/; Max-Age=3600; HttpOnly");
+    }
+    else if (request.getPath() == "/upload")
+    {
+        valid = validateUpload(request, location, content_type);
+        if (!valid.empty())
+            return (valid);
+        if (content_type.find("application/x-www-form-urlencoded") != std::string::npos)
+            return (handleUrlEncoded(request, location));
+        else if (content_type.find("multipart/form-data") != std::string::npos)
+            return (handleMultipart(request, location, content_type));
+        else
+            return(handleRawBody(request, location, content_type));
+    }
 
     return (this->build());
 }

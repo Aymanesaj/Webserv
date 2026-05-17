@@ -24,6 +24,7 @@ class HttpResponse
 		void			setBody(const std::string& body);
 		void			setCookie(const std::string& cookie);
 		std::string		getMimeType( const std::string& path ) const;
+		std::string 	handleCGI(HttpRequest& request);
 		std::string		handleGET(HttpRequest& request);
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
@@ -35,11 +36,12 @@ class HttpResponse
 		std::string 	handleRawBody(HttpRequest& request,
                         LocationConfig& location, const std::string& content_type);
 		std::string		handleAutoIndex(const std::string& path, HttpRequest& request);
-	std::string		build( void ) const;
-	std::string		redirectWithCookie(const std::string &location, const std::string &cookie);
-	std::string     getErrorPage(StatusCode errorCode) const;
+		std::string		build( void ) const;
+		std::string		redirectWithCookie(const std::string &location, const std::string &cookie);
+		std::string     getErrorPage(StatusCode errorCode) const;
 		std::string   	login(HttpRequest& request);
 		std::string     signup(HttpRequest& request);
+		bool isCGI(const std::string& path);
 	public:
         HttpResponse();
 		void			setServer( ServerConfig _server );

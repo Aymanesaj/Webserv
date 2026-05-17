@@ -33,6 +33,15 @@ struct LocationConfig {
 	bool has_autoindex;
 	bool has_methods;
 
+	bool isMethodAllowed(const std::string& method) const {
+	if (allowed_methods.empty())
+		return true;
+	for (size_t i = 0; i < allowed_methods.size(); i++) {
+		if (allowed_methods[i] == method)
+			return true;
+		}
+		return false;
+    }
     LocationConfig();
 };
 
@@ -93,7 +102,8 @@ class ConfigParser {
 	public:
 		ConfigParser(const std::string& filename);
 		~ConfigParser();
-		const std::vector<ServerConfig>& getServers() const;
+		const std::vector<ServerConfig>& getServers() ;
+		static LocationConfig findLocation(const std::string& uri, const ServerConfig& server);
 };
 
 

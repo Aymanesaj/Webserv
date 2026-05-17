@@ -129,7 +129,7 @@ std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
     }
 }
 
-std::string     HttpResponse::handleRequest(HttpRequest& request)
+std::string HttpResponse::handleRequest(HttpRequest& request)
 {
     std::string response;
     std::string method = request.getMethod();

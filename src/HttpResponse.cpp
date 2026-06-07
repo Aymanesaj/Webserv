@@ -156,3 +156,8 @@ StatusCode      HttpResponse::getStatusCode( void ) const
 {
     return this->_statusCode;
 }
+
+void HttpResponse::setServer(ServerConfig server)
+{
+    this->_server = server;
+}

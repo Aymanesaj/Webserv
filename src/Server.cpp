@@ -154,6 +154,7 @@ void Server::readRequest(size_t& i)
 	std::string raw_resp = response.handleRequest(request);
 	if (isLogout)
 		this->sessions_manager.removeSession(request.getSession().getId());
+	std::cout << " -> " << response.getStatusCode() << std::endl;
 	write(fd, raw_resp.c_str(), raw_resp.size());
 	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
 		removeClient(i);

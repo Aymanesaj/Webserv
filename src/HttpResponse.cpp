@@ -161,3 +161,31 @@ void HttpResponse::setServer(ServerConfig server)
 {
     this->_server = server;
 }
+
+std::string HttpResponse::handleAutoIndex(HttpRequest& request, const LocationConfig& location)
+{
+    std::string path = location.root + request.getPath();
+    DIR* dir = opendir(path.c_str());
+    if (!dir)
+        return this->errorResponse(NOT_FOUND);
+    std::string body = "<html><head><title>Index of " + request.getPath() + "</title></head><body>";
+    body += "<h1>Index of " + request.getPath() + "</h1><hr><pre>";
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        std::string name = entry->d_name;
+        if (name == ".")
+            continue;
+        std::string full_path = path + name;
+        if (Utils::is_Directory(full_path))
+            name += "/";
+        body += "<a href=\"" + request.getPath() + "/" + name + "\">" + name + "</a>\n";
+    }
+    closedir(dir);
+    body += "</pre><hr></body></html>";
+    this->setHeader("Content-type", "text/html");
+    this->setBody(body);
+    this->setHeader("Content-Length", Utils::to_string_c98(this->_body.size()));
+    this->setStatusCode(OK);
+    return this->build();
+}

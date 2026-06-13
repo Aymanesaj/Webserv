@@ -2,15 +2,40 @@
 
 std::string     HttpResponse::handleGET(HttpRequest& request)
 {
-    std::string path = "./www" + request.getPath();
-    if (path == "./www/")
-        path = "./www/index.html";
+    LocationConfig location = ConfigParser::findLocation(request.getPath(), this->_server);
+    if (!location.isMethodAllowed(request.getMethod()))
+        return this->errorResponse(METHOD_NOT_ALLOWED);
+    std::string path = location.root + request.getPath();
+    if (path == location.root + "/")
+        path += location.index;
+    if (location.has_return && !location.return_url.empty())
+        return this->redirectWithCookie(location.return_url, "");
+    if (location.has_cgi_path && location.has_cgi_extension) // handle CGI here
+    {
+        // std::vector<std::string> split_path = Utils::split(request.getPath(), ".");
+        // if (split_path.size() > 1 && split_path.back() == location.cgi_ext)
+        //     return this->handleCGI(request, location);
+    }
+    if (Utils::is_Directory(path)) {
+        if (path[path.length() - 1] != '/')
+            path += "/";
+        if (location.autoindex)
+            return this->handleAutoIndex(request, location);
+        if (!location.has_index || location.index.empty()) {
+            return this->errorResponse(FORBIDDEN);
+        }
+        path += location.index;
+    }
+
+    /*--- session handling ---*/
     Session& session = request.getSession();
     if (request.getPath() == "/profile.html" && session.getUserName().empty())
         return this->redirectWithCookie("/login.html", "");
     else if ((request.getPath() == "/login.html" || request.getPath() == "/signup.html")
         && !session.getUserName().empty())
         return this->redirectWithCookie("/profile.html", "");
+    /*--- ---*/
+
     std::ifstream   file(path.c_str(), std::ios::in | std::ios::binary);
     if (!file.is_open())
         return this->errorResponse(NOT_FOUND);

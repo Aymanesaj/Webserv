@@ -102,6 +102,12 @@ int Utils::createTempFile( void )
     return fd;
 }
 
+bool Utils::isFileExists(const std::string& path)
+{
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
+
 bool Utils::is_Directory(const std::string& path)
 {
     struct stat info;

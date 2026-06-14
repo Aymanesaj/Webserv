@@ -37,7 +37,9 @@ std::string     HttpResponse::handleGET(HttpRequest& request)
     /*--- ---*/
 
     std::ifstream   file(path.c_str(), std::ios::in | std::ios::binary);
-    if (!file.is_open())
+    if (!file.is_open() && Utils::isFileExists(path))
+        return this->errorResponse(FORBIDDEN);
+    else if (!file.is_open())
         return this->errorResponse(NOT_FOUND);
     std::string         line;
     std::stringstream   buffer;

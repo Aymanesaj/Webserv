@@ -20,6 +20,7 @@ class Utils
         static  void                replace(std::string& str, const std::string& from, const std::string& to);
         static  int                 createTempFile( void );
         static  bool                is_Directory(const std::string& path);
+        static  bool                isFileExists(const std::string& path);
 };
 
 #endif

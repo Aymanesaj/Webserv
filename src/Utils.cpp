@@ -101,3 +101,11 @@ int Utils::createTempFile( void )
     int fd = mkstemp(temp);
     return fd;
 }
+
+bool Utils::is_Directory(const std::string& path)
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return (info.st_mode & S_IFDIR) != 0;
+}

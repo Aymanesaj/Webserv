@@ -32,6 +32,7 @@ class HttpResponse
 		std::string     getErrorPage(StatusCode errorCode) const;
 		std::string   	login(HttpRequest& request);
 		std::string     signup(HttpRequest& request);
+		std::string		handleAutoIndex(HttpRequest& request, const LocationConfig& location);
 	public:
         HttpResponse();
 		void			setServer( ServerConfig _server );

@@ -95,10 +95,11 @@ void    Utils::replace(std::string& str, const std::string& old, const std::stri
         str.replace(pos, old.size(), new_str);
 }
 
-int Utils::createTempFile( void )
+int Utils::createTempFile( std::string& tmp_file )
 {
     char temp[] = "/tmp/webserv_temp_XXXXXX";
     int fd = mkstemp(temp);
+    tmp_file = std::string(temp);
     return fd;
 }
 
@@ -114,14 +115,6 @@ bool Utils::is_Directory(const std::string& path)
     if (stat(path.c_str(), &info) != 0)
         return false;
     return (info.st_mode & S_IFDIR) != 0;
-}
-
-size_t Utils::getBodySize(int body)
-{
-    struct stat fileStat;
-    if (fstat(body, &fileStat) == -1)
-        return 0;
-    return static_cast<size_t>(fileStat.st_size);
 }
 
 bool Utils::is_Writable(const std::string& path)

@@ -239,12 +239,6 @@ std::string   HttpResponse::handleUpload(HttpRequest& request, const LocationCon
         return this->errorResponse(FORBIDDEN);
     if (!Utils::is_Writable(location.upload_path))
         return this->errorResponse(INTERNAL_SERVER_ERROR);
-    int body_fd = request.getBody();
-    size_t body_size = Utils::getBodySize(body_fd);
-    if (body_size == 0)
-        return this->errorResponse(BAD_REQUEST);
-    if (body_size > this->_server.client_max_body_size)
-        return this->errorResponse(CONTENT_TOO_LARGE);
     std::string content_type = request.getHeaders().at("Content-type");
     if (content_type.find("multipart/form-data") != std::string::npos)
         return handleMultipartBody(request, location);

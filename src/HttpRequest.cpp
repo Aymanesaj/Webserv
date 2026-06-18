@@ -9,7 +9,12 @@ HttpRequest::~HttpRequest()
     if (this->body_file != -1)
     {
         close(this->body_file);
-        unlink("/tmp/webserv_temp_XXXXXX");
+        this->body_file = -1;
+    }
+    if (!this->body_file_path.empty())
+    {
+        unlink(this->body_file_path.c_str());
+        this->body_file_path.clear();
     }
 }
 
@@ -83,6 +88,11 @@ Session&  HttpRequest::getSession( void )
     return *this->session;
 }
 
+const std::string& HttpRequest::getBodyFilePath( void ) const
+{
+    return this->body_file_path;
+}
+
 const std::string HttpRequest::getTheme( void ) const
 {
     std::string theme_cookie = "theme-dark"; // default theme
@@ -100,6 +110,15 @@ const std::string HttpRequest::getTheme( void ) const
 
 void HttpRequest::setBodyFile( void )
 {
-    int fd = Utils::createTempFile();
+    int fd = Utils::createTempFile(this->body_file_path);
     this->body_file = fd;
 }
+
+void HttpRequest::setBodyFile( const std::string& path )
+{
+    if (path.empty())
+        return ;
+    this->body_file_path = path;
+    this->body_file = open(path.c_str(), O_RDWR);
+}
+

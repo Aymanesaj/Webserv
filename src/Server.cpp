@@ -132,14 +132,9 @@ void Server::readRequest(size_t& i)
     HttpRequest& request = parse[fd].getRequest();
 	try
 	{
-		// std::cout << "REQUEST -------------------------" << std::endl;
-		// std::cout << connections[fd] << std::endl;
-		// std::cout << "-------------------------" << std::endl;
 		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
-			return ;
-		std::string cookie = request.getCookies();		
-		std::cout
-            << request.getMethod()
+			return ;		
+		std::cout << request.getMethod()
             << " " << request.getPath()
             << " " << request.getVersion()
             << " host=" << request.getHeaders().at("Host");

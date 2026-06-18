@@ -115,3 +115,66 @@ bool Utils::is_Directory(const std::string& path)
         return false;
     return (info.st_mode & S_IFDIR) != 0;
 }
+
+size_t Utils::getBodySize(int body)
+{
+    struct stat fileStat;
+    if (fstat(body, &fileStat) == -1)
+        return 0;
+    return static_cast<size_t>(fileStat.st_size);
+}
+
+bool Utils::is_Writable(const std::string& path)
+{
+    return (access(path.c_str(), W_OK) == 0);
+}
+
+/* 
+* Extracts one line (ending in \r\n).
+* If the buffer doesn't have \r\n, it reads more from the fd until it does.
+*/
+bool Utils::extractLine(std::vector<char>& buffer, int fd, std::string& line) {
+    line.clear();
+    const char crlf[] = {'\r', '\n'};
+    
+    while (true) {
+        // Look for \r\n in buffer
+        std::vector<char>::iterator it = std::search(buffer.begin(), buffer.end(), crlf, crlf + 2);
+        
+        if (it != buffer.end()) {
+            line.assign(buffer.begin(), it); // Assign data to string (excluding \r\n)
+            buffer.erase(buffer.begin(), it + 2);
+            return true;
+        }
+        
+        char tmp[8192];
+        ssize_t bytes = read(fd, tmp, sizeof(tmp));
+        if (bytes <= 0) {
+            if (!buffer.empty()) {
+                line.assign(buffer.begin(), buffer.end());
+                buffer.clear();
+                return true;
+            }
+            return false;
+        }
+        buffer.insert(buffer.end(), tmp, tmp + bytes);
+    }
+}
+
+std::string Utils::getExtension(const std::string& ContentType)
+{
+    if (ContentType == "text/html")
+        return ".html";
+    else if (ContentType == "text/plain")
+        return ".txt";
+    else if (ContentType == "image/jpeg")
+        return ".jpg";
+    else if (ContentType == "image/png")
+        return ".png";
+    else if (ContentType == "video/mp4")
+        return ".mp4";
+    else if (ContentType == "application/pdf")
+        return ".pdf";
+    else
+        return "";
+}

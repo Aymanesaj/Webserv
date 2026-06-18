@@ -120,17 +120,21 @@ void Server::readRequest(size_t& i)
 	if (bytes <= 0){
 		removeClient(i);
 		return ;
-	} else if (static_cast<unsigned char>(buffer[0]) == 0x16)
-	{
-		std::cerr << "TLS Handshake received : BUT HTTPS NOT SUPPORTED" << std::endl;
-		removeClient(i);
-		return ;
-	}
+	} 
+	// else if (static_cast<unsigned char>(buffer[0]) == 0x16)
+	// {
+	// 	std::cerr << "TLS Handshake received : BUT HTTPS NOT SUPPORTED" << std::endl;
+	// 	removeClient(i);
+	// 	return ;
+	// }
 	connections[fd].assign(buffer, bytes);
     HttpResponse response;
     HttpRequest& request = parse[fd].getRequest();
 	try
 	{
+		// std::cout << "REQUEST -------------------------" << std::endl;
+		// std::cout << connections[fd] << std::endl;
+		// std::cout << "-------------------------" << std::endl;
 		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
 			return ;
 		std::string cookie = request.getCookies();		

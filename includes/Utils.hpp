@@ -21,6 +21,10 @@ class Utils
         static  int                 createTempFile( void );
         static  bool                is_Directory(const std::string& path);
         static  bool                isFileExists(const std::string& path);
+        static  size_t              getBodySize(int body);
+        static  bool                is_Writable(const std::string& path);
+        static  bool                extractLine(std::vector<char>& buffer, int fd, std::string& line);
+        static  std::string         getExtension(const std::string& ContentType);
 };
 
 #endif

@@ -25,7 +25,6 @@ class HttpRequest
         void    setCookies( const std::string& cookies);
         void    setBody(const std::string& body);
         void    setSession(Session& session);
-        void    setBodyFile( const std::string& path );
         void    setBodyFile( void );
         const std::string&      getMethod( void ) const;
         const std::string&      getPath( void ) const;
@@ -34,7 +33,6 @@ class HttpRequest
         const std::string       getTheme( void ) const;
         int                     getBody( void ) const;
         Session&                getSession( void );
-        const std::string&      getBodyFilePath( void ) const;
         const std::map<std::string, std::string>&   getHeaders( void ) const;
 };
 

@@ -88,11 +88,6 @@ Session&  HttpRequest::getSession( void )
     return *this->session;
 }
 
-const std::string& HttpRequest::getBodyFilePath( void ) const
-{
-    return this->body_file_path;
-}
-
 const std::string HttpRequest::getTheme( void ) const
 {
     std::string theme_cookie = "theme-dark"; // default theme
@@ -112,13 +107,5 @@ void HttpRequest::setBodyFile( void )
 {
     int fd = Utils::createTempFile(this->body_file_path);
     this->body_file = fd;
-}
-
-void HttpRequest::setBodyFile( const std::string& path )
-{
-    if (path.empty())
-        return ;
-    this->body_file_path = path;
-    this->body_file = open(path.c_str(), O_RDWR);
 }
 

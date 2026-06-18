@@ -282,8 +282,5 @@ void    HttpParser::resetStates( void )
     this->_chunkState = CHUNK_SIZE;
     this->_errorCode = 0;
     if (this->_request.getBody() != -1)
-    {
-        close(this->_request.getBody());
-        this->_request.setBodyFile(this->_request.getBodyFilePath());
-    }
+        lseek(this->_request.getBody(), 0, SEEK_SET);
 }

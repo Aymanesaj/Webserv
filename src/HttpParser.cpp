@@ -206,9 +206,12 @@ void    HttpParser::setBodyType( const std::map<std::string, std::string>& heade
 
 ParseResult HttpParser::parseLengthBody( void )
 {
-    this->_request.setBody(this->_buffer.substr(0, this->_expectedBodySize));
-    this->_receivedBodySize += this->_buffer.length();
-    this->_buffer.clear();
+    size_t needed = this->_expectedBodySize - this->_receivedBodySize;
+    size_t bytes_to_write = std::min(needed, this->_buffer.length());
+    
+    this->_request.setBody(this->_buffer.substr(0, bytes_to_write));
+    this->_receivedBodySize += bytes_to_write;
+    this->_buffer.erase(0, bytes_to_write);
     return this->_receivedBodySize < this->_expectedBodySize ? INCOMPLETE : COMPLETE;
 }
 
@@ -235,20 +238,22 @@ ParseResult HttpParser::parseChunkBody( void )
                 if (chunkSize == 0)
                     result = COMPLETE;
                 else
+                {
+                    this->_expectedBodySize = static_cast<size_t>(chunkSize);
                     this->_chunkState = CHUNK_DATA;
+                }
                 break;
             case CHUNK_DATA:
-                pos = this->_buffer.find("\r\n");
-                if (pos == std::string::npos)
-                    pos = this->_buffer.length();
-                tmp = this->_buffer.substr(0, pos);
-                if (static_cast<size_t>(chunkSize) != tmp.length())
+                if (this->_buffer.length() < this->_expectedBodySize + 2)
+                    return INCOMPLETE;
+                if (this->_buffer.compare(this->_expectedBodySize, 2, "\r\n") != 0)
                     setErrorCode(BAD_REQUEST);
+                tmp = this->_buffer.substr(0, this->_expectedBodySize);
                 this->_request.setBody(tmp);
-                this->_receivedBodySize += tmp.length();
-                this->_buffer.erase(0, pos + 2);
+                this->_receivedBodySize += this->_expectedBodySize;
+                this->_buffer.erase(0, this->_expectedBodySize + 2);
                 this->_chunkState = CHUNK_SIZE;
-            break;
+                break;
         }
         if (result != NONE) break;
     }
@@ -286,4 +291,15 @@ void    HttpParser::resetStates( void )
         close(this->_request.getBody());
         this->_request.setBodyFile(-1);
     }
+}
+
+void    HttpParser::clearRequest( void )
+{
+    this->_request.clear();
+    this->_state = REQUEST_LINE;
+    this->_expectedBodySize = 0;
+    this->_receivedBodySize = 0;
+    this->_bodyType = NO_BODY;
+    this->_chunkState = CHUNK_SIZE;
+    this->_errorCode = 0;
 }

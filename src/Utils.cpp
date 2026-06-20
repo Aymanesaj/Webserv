@@ -144,6 +144,7 @@ bool Utils::extractLine(std::vector<char>& buffer, int fd, std::string& line) {
         }
         buffer.insert(buffer.end(), tmp, tmp + bytes);
     }
+    return false;
 }
 
 std::string Utils::getExtension(const std::string& ContentType)

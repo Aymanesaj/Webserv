@@ -157,6 +157,8 @@ void Server::readRequest(size_t& i)
 	write(fd, raw_resp.c_str(), raw_resp.size());
 	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
 		removeClient(i);
+	else
+		parse[fd].clearRequest();
 }
 
 void Server::removeClient(size_t& i)

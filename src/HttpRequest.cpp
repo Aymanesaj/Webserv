@@ -6,6 +6,17 @@ HttpRequest::HttpRequest() : session(NULL), body_file(-1)
 
 HttpRequest::~HttpRequest()
 {
+    this->clear();
+}
+
+void HttpRequest::clear( void )
+{
+    this->method.clear();
+    this->path.clear();
+    this->version.clear();
+    this->headers.clear();
+    this->cookies.clear();
+    this->session = NULL;
     if (this->body_file != -1)
     {
         close(this->body_file);

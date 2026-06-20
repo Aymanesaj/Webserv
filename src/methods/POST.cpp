@@ -143,17 +143,27 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
     std::vector<char> buffer;
     std::string line;
 
+    bool found_boundary = false;
     while (Utils::extractLine(buffer, body_fd, line)) {
-        if (line == boundary) break;
+        if (line == boundary) {
+            found_boundary = true;
+            break;
+        }
     }
+    if (!found_boundary)
+        return this->errorResponse(BAD_REQUEST);
 
     while (true) {
         std::string file_name = "";
         bool is_file = false;
 
         // Parse Headers
+        bool headers_complete = false;
         while (Utils::extractLine(buffer, body_fd, line)) {
-            if (line.empty()) break; // End of headers (\r\n\r\n)
+            if (line.empty()) {
+                headers_complete = true;
+                break; // End of headers (\r\n\r\n)
+            }
             
             if (line.find("Content-Disposition:") != std::string::npos) {
                 size_t name_pos = line.find("filename=\"");
@@ -167,6 +177,8 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
                 }
             }
         }
+        if (!headers_complete)
+            return this->errorResponse(BAD_REQUEST);
 
         std::ofstream outfile;
         if (is_file) {
@@ -175,48 +187,58 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
             if (!outfile.is_open())
                 return this->errorResponse(INTERNAL_SERVER_ERROR);
         }
-
+        std::vector<char>::iterator it;
+        size_t boundary_pos;
+        size_t write_size;
+        ssize_t bytes;
         while (true) {
             // Search for "\r\n--boundary" in the current buffer
-            std::vector<char>::iterator it = std::search(buffer.begin(), buffer.end(), target.begin(), target.end());
+            it = std::search(buffer.begin(), buffer.end(), target.begin(), target.end());
             if (it != buffer.end()) {
-                size_t boundary_pos = std::distance(buffer.begin(), it);
+                boundary_pos = std::distance(buffer.begin(), it);
                 if (is_file && outfile.is_open())
                     outfile.write(&buffer[0], boundary_pos);
                 buffer.erase(buffer.begin(), buffer.begin() + boundary_pos);
                 if (outfile.is_open()) outfile.close();
+                found_boundary = true;
                 break;
             } else {
                 // Boundary NOT found. 
                 // Write everything EXCEPT the last (boundary.size() - 1) bytes.
                 // We keep those just in case the boundary is split between this read and the next!
                 if (buffer.size() >= target.size()) {
-                    size_t write_size = buffer.size() - target.size() + 1;
+                    write_size = buffer.size() - target.size() + 1;
                     if (is_file && outfile.is_open())
                         outfile.write(&buffer[0], write_size);
                     buffer.erase(buffer.begin(), buffer.begin() + write_size);
                 }
                 char tmp[8192];
-                ssize_t bytes = read(body_fd, tmp, sizeof(tmp));
+                bytes = read(body_fd, tmp, sizeof(tmp));
                 if (bytes <= 0) {
                     if (is_file && outfile.is_open() && !buffer.empty())
                         outfile.write(&buffer[0], buffer.size());
                     buffer.clear();
+                    if (outfile.is_open()) outfile.close();
                     break;
                 }
                 buffer.insert(buffer.end(), tmp, tmp + bytes);
             }
         }
 
+        if (!found_boundary)
+            return this->errorResponse(BAD_REQUEST);
+
         // Process the boundary we left in the buffer
         // Because the buffer starts with "\r\n--boundary", the first extractLine call 
         // will find the \r\n immediately and return an empty line.
         std::string empty_line;
-        Utils::extractLine(buffer, body_fd, empty_line); 
+        if (!Utils::extractLine(buffer, body_fd, empty_line))
+            return this->errorResponse(BAD_REQUEST);
 
         // extract boundary
         std::string bound_line;
-        Utils::extractLine(buffer, body_fd, bound_line);
+        if (!Utils::extractLine(buffer, body_fd, bound_line))
+            return this->errorResponse(BAD_REQUEST);
         // Check if it's the final boundary
         if (bound_line == boundary + "--")
             break;

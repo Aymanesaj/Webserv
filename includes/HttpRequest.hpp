@@ -18,6 +18,7 @@ class HttpRequest
     public:
         HttpRequest();
         ~HttpRequest();
+        void    clear( void );
         void    setMethod( const std::string& method);
         void    setPath( const std::string& Path);
         void    setVersion( const std::string& version);

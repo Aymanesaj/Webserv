@@ -95,14 +95,6 @@ void    Utils::replace(std::string& str, const std::string& old, const std::stri
         str.replace(pos, old.size(), new_str);
 }
 
-int Utils::createTempFile( std::string& tmp_file )
-{
-    char temp[] = "/tmp/webserv_temp_XXXXXX";
-    int fd = mkstemp(temp);
-    tmp_file = std::string(temp);
-    return fd;
-}
-
 bool Utils::isFileExists(const std::string& path)
 {
     struct stat buffer;

@@ -48,6 +48,11 @@ void    HttpRequest::setBody( const std::string& body)
     write(this->body_file, body.c_str(), body.length());
 }
 
+void HttpRequest::setBodyFile( int fd )
+{
+    this->body_file = fd;
+}
+
 void HttpRequest::setSession(Session& session)
 {
 	this->session = &session;
@@ -78,6 +83,11 @@ const std::string& HttpRequest::getCookies( void ) const
     return this->cookies;
 }
 
+const std::string& HttpRequest::getBodyFilePath( void ) const
+{
+    return this->body_file_path;
+}
+
 int HttpRequest::getBody( void ) const
 {
     return this->body_file;
@@ -103,9 +113,11 @@ const std::string HttpRequest::getTheme( void ) const
     return theme_cookie;
 }
 
-void HttpRequest::setBodyFile( void )
+void HttpRequest::generateTempFile( void )
 {
-    int fd = Utils::createTempFile(this->body_file_path);
+    char temp[] = "/tmp/webserv_temp_XXXXXX";
+    int fd = mkstemp(temp);
+    this->body_file_path = std::string(temp);
     this->body_file = fd;
 }
 

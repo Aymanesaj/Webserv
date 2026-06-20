@@ -250,6 +250,11 @@ std::string   HttpResponse::handleUpload(HttpRequest& request, const LocationCon
 std::string     HttpResponse::handlePOST(HttpRequest& request)
 {
     std::string response_html;
+
+    int fd = open(request.getBodyFilePath().c_str(), O_RDONLY);
+    if (fd == -1)
+        return this->errorResponse(INTERNAL_SERVER_ERROR);
+    request.setBodyFile(fd);
     if (request.getPath() == "/login")
         response_html = this->login(request);
     else if (request.getPath() == "/signup")

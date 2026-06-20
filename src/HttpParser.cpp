@@ -154,7 +154,7 @@ ParseResult HttpParser::parseBody( void )
     ParseResult result = COMPLETE;
     if (this->_bodyType != NO_BODY && this->_request.getBody() == -1)
     {
-        this->_request.setBodyFile();
+        this->_request.generateTempFile();
         if (this->_request.getBody() == -1)
             setErrorCode(INTERNAL_SERVER_ERROR);
     }
@@ -282,5 +282,8 @@ void    HttpParser::resetStates( void )
     this->_chunkState = CHUNK_SIZE;
     this->_errorCode = 0;
     if (this->_request.getBody() != -1)
-        lseek(this->_request.getBody(), 0, SEEK_SET);
+    {
+        close(this->_request.getBody());
+        this->_request.setBodyFile(-1);
+    }
 }

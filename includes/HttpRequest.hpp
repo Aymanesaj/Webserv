@@ -25,11 +25,13 @@ class HttpRequest
         void    setCookies( const std::string& cookies);
         void    setBody(const std::string& body);
         void    setSession(Session& session);
-        void    setBodyFile( void );
+        void    generateTempFile( void );
+        void    setBodyFile( int fd );
         const std::string&      getMethod( void ) const;
         const std::string&      getPath( void ) const;
         const std::string&      getVersion( void ) const;
         const std::string&      getCookies( void ) const;
+        const std::string&      getBodyFilePath( void ) const;
         const std::string       getTheme( void ) const;
         int                     getBody( void ) const;
         Session&                getSession( void );

@@ -114,7 +114,7 @@ void Server::acceptClient(size_t& i)
 
 void Server::readRequest(size_t& i)
 {
-	char buffer[4096];
+	char buffer[65536]; // 64KB buffer
 	int fd = fds[i].fd;
 	ssize_t bytes = read(fd, buffer, sizeof(buffer));
 	if (bytes <= 0){

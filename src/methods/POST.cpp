@@ -102,16 +102,15 @@ std::string   HttpResponse::handleRawBody(HttpRequest& request, const LocationCo
     std::ofstream outfile(filename.c_str(), std::ios::binary);
     if (!outfile.is_open())
         return this->errorResponse(INTERNAL_SERVER_ERROR);
-    const size_t BUF_SZ = 4096;
-    char buf[BUF_SZ];
+    std::vector<char> buf(1048576); // 1MB buffer
     while (true)
     {
-        ssize_t bytes = read(body_fd, buf, BUF_SZ);
+        ssize_t bytes = read(body_fd, &buf[0], buf.size());
         if (bytes < 0)
             return this->errorResponse(INTERNAL_SERVER_ERROR);
         if (bytes == 0)
             break;
-        outfile.write(buf, bytes);
+        outfile.write(&buf[0], bytes);
         if (!outfile)
             return this->errorResponse(INTERNAL_SERVER_ERROR);
     }
@@ -153,6 +152,7 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
     if (!found_boundary)
         return this->errorResponse(BAD_REQUEST);
 
+    std::vector<char> tmp(1048576); // 1MB buffer
     while (true) {
         std::string file_name = "";
         bool is_file = false;
@@ -212,8 +212,7 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
                         outfile.write(&buffer[0], write_size);
                     buffer.erase(buffer.begin(), buffer.begin() + write_size);
                 }
-                char tmp[8192];
-                bytes = read(body_fd, tmp, sizeof(tmp));
+                bytes = read(body_fd, &tmp[0], tmp.size());
                 if (bytes <= 0) {
                     if (is_file && outfile.is_open() && !buffer.empty())
                         outfile.write(&buffer[0], buffer.size());
@@ -221,7 +220,7 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
                     if (outfile.is_open()) outfile.close();
                     break;
                 }
-                buffer.insert(buffer.end(), tmp, tmp + bytes);
+                buffer.insert(buffer.end(), tmp.begin(), tmp.begin() + bytes);
             }
         }
 

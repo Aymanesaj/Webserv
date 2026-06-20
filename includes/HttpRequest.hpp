@@ -14,9 +14,11 @@ class HttpRequest
         std::string cookies;
         Session    *session;
         int         body_file;
+        std::string body_file_path;
     public:
         HttpRequest();
         ~HttpRequest();
+        void    clear( void );
         void    setMethod( const std::string& method);
         void    setPath( const std::string& Path);
         void    setVersion( const std::string& version);
@@ -24,11 +26,13 @@ class HttpRequest
         void    setCookies( const std::string& cookies);
         void    setBody(const std::string& body);
         void    setSession(Session& session);
-        void    setBodyFile( void );
+        void    generateTempFile( void );
+        void    setBodyFile( int fd );
         const std::string&      getMethod( void ) const;
         const std::string&      getPath( void ) const;
         const std::string&      getVersion( void ) const;
         const std::string&      getCookies( void ) const;
+        const std::string&      getBodyFilePath( void ) const;
         const std::string       getTheme( void ) const;
         int                     getBody( void ) const;
         Session&                getSession( void );

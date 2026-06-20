@@ -18,9 +18,11 @@ class Utils
         static  time_t              getCurrentTime( void );
         static  std::string         to_string_c98(const int& value);
         static  void                replace(std::string& str, const std::string& from, const std::string& to);
-        static  int                 createTempFile( void );
         static  bool                is_Directory(const std::string& path);
         static  bool                isFileExists(const std::string& path);
+        static  bool                is_Writable(const std::string& path);
+        static  bool                extractLine(std::vector<char>& buffer, int fd, std::string& line);
+        static  std::string         getExtension(const std::string& ContentType);
 };
 
 #endif

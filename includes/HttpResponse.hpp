@@ -33,6 +33,9 @@ class HttpResponse
 		std::string   	login(HttpRequest& request);
 		std::string     signup(HttpRequest& request);
 		std::string		handleAutoIndex(HttpRequest& request, const LocationConfig& location);
+		std::string		handleUpload(HttpRequest& request, const LocationConfig& location);
+		std::string		handleRawBody(HttpRequest& request, const LocationConfig& location);
+		std::string		handleMultipartBody(HttpRequest& request, const LocationConfig& location);
 	public:
         HttpResponse();
 		void			setServer( ServerConfig _server );

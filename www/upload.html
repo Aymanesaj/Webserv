@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style/style.css">
+    <title>Webserv Upload</title>
+    <style>
+        .upload-form {
+            display: grid;
+            gap: 14px;
+        }
+
+        .upload-form label {
+            display: grid;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .upload-form input[type="file"] {
+            width: 100%;
+            color: var(--muted);
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .upload-form button {
+            justify-self: start;
+        }
+        .upload-form input[type="file"]::file-selector-button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+    <main class="container">
+        <section class="hero">
+            <h1>Upload a file</h1>
+            <p class="subtitle">Use this form to test multipart file uploads on the Webserv server.</p>
+
+            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <label for="file">
+                    Select file
+                    <input type="file" id="file" name="file" required>
+                </label>
+                <button type="submit" class="theme-toggle-btn">Upload</button>
+            </form>
+
+            <div class="routes">
+                <a href="/">Return Home</a>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

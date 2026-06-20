@@ -95,13 +95,6 @@ void    Utils::replace(std::string& str, const std::string& old, const std::stri
         str.replace(pos, old.size(), new_str);
 }
 
-int Utils::createTempFile( void )
-{
-    char temp[] = "/tmp/webserv_temp_XXXXXX";
-    int fd = mkstemp(temp);
-    return fd;
-}
-
 bool Utils::isFileExists(const std::string& path)
 {
     struct stat buffer;
@@ -114,4 +107,60 @@ bool Utils::is_Directory(const std::string& path)
     if (stat(path.c_str(), &info) != 0)
         return false;
     return (info.st_mode & S_IFDIR) != 0;
+}
+
+bool Utils::is_Writable(const std::string& path)
+{
+    return (access(path.c_str(), W_OK) == 0);
+}
+
+/* 
+* Extracts one line (ending in \r\n).
+* If the buffer doesn't have \r\n, it reads more from the fd until it does.
+*/
+bool Utils::extractLine(std::vector<char>& buffer, int fd, std::string& line) {
+    line.clear();
+    const char crlf[] = {'\r', '\n'};
+    
+    while (true) {
+        // Look for \r\n in buffer
+        std::vector<char>::iterator it = std::search(buffer.begin(), buffer.end(), crlf, crlf + 2);
+        
+        if (it != buffer.end()) {
+            line.assign(buffer.begin(), it); // Assign data to string (excluding \r\n)
+            buffer.erase(buffer.begin(), it + 2);
+            return true;
+        }
+        
+        char tmp[8192];
+        ssize_t bytes = read(fd, tmp, sizeof(tmp));
+        if (bytes <= 0) {
+            if (!buffer.empty()) {
+                line.assign(buffer.begin(), buffer.end());
+                buffer.clear();
+                return true;
+            }
+            return false;
+        }
+        buffer.insert(buffer.end(), tmp, tmp + bytes);
+    }
+    return false;
+}
+
+std::string Utils::getExtension(const std::string& ContentType)
+{
+    if (ContentType == "text/html")
+        return ".html";
+    else if (ContentType == "text/plain")
+        return ".txt";
+    else if (ContentType == "image/jpeg")
+        return ".jpg";
+    else if (ContentType == "image/png")
+        return ".png";
+    else if (ContentType == "video/mp4")
+        return ".mp4";
+    else if (ContentType == "application/pdf")
+        return ".pdf";
+    else
+        return "";
 }

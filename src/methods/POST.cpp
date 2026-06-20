@@ -86,9 +86,196 @@ std::string   HttpResponse::signup(HttpRequest& request)
 }
 /* * */
 
+std::string   HttpResponse::handleRawBody(HttpRequest& request, const LocationConfig& location)
+{
+    int body_fd = request.getBody();
+    std::string filename = "upload", req_path = request.getPath();
+    std::string content_type;
+
+    if (request.getHeaders().count("Content-type"))
+        content_type = request.getHeaders().at("Content-type");
+    else
+        content_type = "application/octet-stream";
+    std::string extension = Utils::getExtension(content_type);
+    filename = "upload_" + Utils::to_string_c98(Utils::getCurrentTime()) + extension;
+    filename = location.upload_path + "/" + filename;
+    std::ofstream outfile(filename.c_str(), std::ios::binary);
+    if (!outfile.is_open())
+        return this->errorResponse(INTERNAL_SERVER_ERROR);
+    std::vector<char> buf(1048576); // 1MB buffer
+    while (true)
+    {
+        ssize_t bytes = read(body_fd, &buf[0], buf.size());
+        if (bytes < 0)
+            return this->errorResponse(INTERNAL_SERVER_ERROR);
+        if (bytes == 0)
+            break;
+        outfile.write(&buf[0], bytes);
+        if (!outfile)
+            return this->errorResponse(INTERNAL_SERVER_ERROR);
+    }
+    outfile.close();
+    this->setStatusCode(CREATED);
+    this->setHeader("Content-Type", "text/html");
+    std::string response_body = "<html><body><h1>File uploaded successfully</h1></body></html>";
+    this->setHeader("Content-Length", Utils::to_string_c98(response_body.size()));
+    this->setBody(response_body);
+    return this->build();
+}
+
+std::string HttpResponse::handleMultipartBody(HttpRequest& request, const LocationConfig& location)
+{
+    int body_fd = request.getBody(); 
+    std::map<std::string, std::string> headers = request.getHeaders();
+    std::string content_type;
+
+    if (headers.count("Content-type")) content_type = headers.at("Content-type");
+    else return this->errorResponse(BAD_REQUEST);
+
+    size_t boundary_pos = content_type.find("boundary=");
+    if (boundary_pos == std::string::npos)
+        return this->errorResponse(BAD_REQUEST);
+
+    std::string boundary = "--" + content_type.substr(boundary_pos + 9);
+    std::string target_str = "\r\n" + boundary;
+    std::vector<char> target(target_str.begin(), target_str.end());
+    std::vector<char> buffer;
+    std::string line;
+
+    bool found_boundary = false;
+    while (Utils::extractLine(buffer, body_fd, line)) {
+        if (line == boundary) {
+            found_boundary = true;
+            break;
+        }
+    }
+    if (!found_boundary)
+        return this->errorResponse(BAD_REQUEST);
+
+    std::vector<char> tmp(1048576); // 1MB buffer
+    while (true) {
+        std::string file_name = "";
+        bool is_file = false;
+
+        // Parse Headers
+        bool headers_complete = false;
+        while (Utils::extractLine(buffer, body_fd, line)) {
+            if (line.empty()) {
+                headers_complete = true;
+                break; // End of headers (\r\n\r\n)
+            }
+            
+            if (line.find("Content-Disposition:") != std::string::npos) {
+                size_t name_pos = line.find("filename=\"");
+                if (name_pos != std::string::npos) {
+                    name_pos += 10;
+                    size_t end_pos = line.find("\"", name_pos);
+                    if (end_pos != std::string::npos) {
+                        file_name = line.substr(name_pos, end_pos - name_pos);
+                        if (!file_name.empty()) is_file = true;
+                    }
+                }
+            }
+        }
+        if (!headers_complete)
+            return this->errorResponse(BAD_REQUEST);
+
+        std::ofstream outfile;
+        if (is_file) {
+            std::string full_path = location.upload_path + "/" + file_name;
+            outfile.open(full_path.c_str(), std::ios::binary);
+            if (!outfile.is_open())
+                return this->errorResponse(INTERNAL_SERVER_ERROR);
+        }
+        std::vector<char>::iterator it;
+        size_t boundary_pos;
+        size_t write_size;
+        ssize_t bytes;
+        while (true) {
+            // Search for "\r\n--boundary" in the current buffer
+            it = std::search(buffer.begin(), buffer.end(), target.begin(), target.end());
+            if (it != buffer.end()) {
+                boundary_pos = std::distance(buffer.begin(), it);
+                if (is_file && outfile.is_open())
+                    outfile.write(&buffer[0], boundary_pos);
+                buffer.erase(buffer.begin(), buffer.begin() + boundary_pos);
+                if (outfile.is_open()) outfile.close();
+                found_boundary = true;
+                break;
+            } else {
+                // Boundary NOT found. 
+                // Write everything EXCEPT the last (boundary.size() - 1) bytes.
+                // We keep those just in case the boundary is split between this read and the next!
+                if (buffer.size() >= target.size()) {
+                    write_size = buffer.size() - target.size() + 1;
+                    if (is_file && outfile.is_open())
+                        outfile.write(&buffer[0], write_size);
+                    buffer.erase(buffer.begin(), buffer.begin() + write_size);
+                }
+                bytes = read(body_fd, &tmp[0], tmp.size());
+                if (bytes <= 0) {
+                    if (is_file && outfile.is_open() && !buffer.empty())
+                        outfile.write(&buffer[0], buffer.size());
+                    buffer.clear();
+                    if (outfile.is_open()) outfile.close();
+                    break;
+                }
+                buffer.insert(buffer.end(), tmp.begin(), tmp.begin() + bytes);
+            }
+        }
+
+        if (!found_boundary)
+            return this->errorResponse(BAD_REQUEST);
+
+        // Process the boundary we left in the buffer
+        // Because the buffer starts with "\r\n--boundary", the first extractLine call 
+        // will find the \r\n immediately and return an empty line.
+        std::string empty_line;
+        if (!Utils::extractLine(buffer, body_fd, empty_line))
+            return this->errorResponse(BAD_REQUEST);
+
+        // extract boundary
+        std::string bound_line;
+        if (!Utils::extractLine(buffer, body_fd, bound_line))
+            return this->errorResponse(BAD_REQUEST);
+        // Check if it's the final boundary
+        if (bound_line == boundary + "--")
+            break;
+    }
+
+    this->setStatusCode(CREATED);
+    this->setHeader("Content-Type", "text/html");
+    std::string response_body = "<html><body><h1>Files uploaded successfully</h1><p><a href=\"/\">Back to Home Page</a></p></body></html>";
+    this->setHeader("Content-Length", Utils::to_string_c98(response_body.size()));
+    this->setBody(response_body);    
+    return this->build();
+}
+
+
+std::string   HttpResponse::handleUpload(HttpRequest& request, const LocationConfig& location)
+{
+    if (!location.isMethodAllowed(request.getMethod()))
+        return this->errorResponse(METHOD_NOT_ALLOWED);
+    if (!location.upload_enable)
+        return this->errorResponse(FORBIDDEN);
+    if (!Utils::is_Writable(location.upload_path))
+        return this->errorResponse(INTERNAL_SERVER_ERROR);
+    std::string content_type = request.getHeaders().at("Content-type");
+    if (content_type.find("multipart/form-data") != std::string::npos)
+        return handleMultipartBody(request, location);
+    else
+        return handleRawBody(request, location);
+}
+
+
 std::string     HttpResponse::handlePOST(HttpRequest& request)
 {
     std::string response_html;
+
+    int fd = open(request.getBodyFilePath().c_str(), O_RDONLY);
+    if (fd == -1)
+        return this->errorResponse(INTERNAL_SERVER_ERROR);
+    request.setBodyFile(fd);
     if (request.getPath() == "/login")
         response_html = this->login(request);
     else if (request.getPath() == "/signup")
@@ -101,6 +288,8 @@ std::string     HttpResponse::handlePOST(HttpRequest& request)
         std::string new_theme = (theme_cookie == "theme-light") ? "theme-dark" : "theme-light";
         return this->redirectWithCookie("/", "theme=" + new_theme + "; Path=/; Max-Age=3600; HttpOnly");
     }
+    else if (request.getPath() == "/upload")
+        return this->handleUpload(request, ConfigParser::findLocation(request.getPath(), this->_server));
     else
         return this->errorResponse(NOT_FOUND);
     this->setHeader("Content-Type", "text/html");

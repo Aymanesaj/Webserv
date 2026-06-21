@@ -92,10 +92,9 @@ std::string   HttpResponse::handleRawBody(HttpRequest& request, const LocationCo
     std::string filename = "upload", req_path = request.getPath();
     std::string content_type;
 
-    if (request.getHeaders().count("Content-type"))
-        content_type = request.getHeaders().at("Content-type");
-    else
-        content_type = "application/octet-stream";
+    if (request.getHeaders().count("Content-type")) content_type = request.getHeaders().at("Content-type");
+    else content_type = "application/octet-stream";
+
     std::string extension = Utils::getExtension(content_type);
     filename = "upload_" + Utils::to_string_c98(Utils::getCurrentTime()) + extension;
     filename = location.upload_path + "/" + filename;
@@ -260,7 +259,20 @@ std::string   HttpResponse::handleUpload(HttpRequest& request, const LocationCon
         return this->errorResponse(FORBIDDEN);
     if (!Utils::is_Writable(location.upload_path))
         return this->errorResponse(INTERNAL_SERVER_ERROR);
-    std::string content_type = request.getHeaders().at("Content-type");
+
+    if (request.getHeaders().count("Content-length") && request.getHeaders().at("Content-length") == "0")
+    {
+        this->setStatusCode(OK);
+        this->setHeader("Content-Type", "text/html");
+        std::string response_body = "<html><body><h1>No file uploaded</h1><p><a href=\"/\">Back to Home Page</a></p></body></html>";
+        this->setHeader("Content-Length", Utils::to_string_c98(response_body.size()));
+        this->setBody(response_body);
+        return this->build();
+    }
+
+    std::string content_type;
+    if (request.getHeaders().count("Content-type")) content_type = request.getHeaders().at("Content-type");
+    else content_type = "application/octet-stream";
     if (content_type.find("multipart/form-data") != std::string::npos)
         return handleMultipartBody(request, location);
     else

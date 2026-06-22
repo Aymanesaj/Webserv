@@ -32,6 +32,11 @@ ServerConfig& Server::getServer(const std::string hostHeader, int client_fd)
     return servers[0];
 }
 
+size_t Server::getClientMaxBodySize(const std::string& hostHeader, int client_fd)
+{
+    return getServer(hostHeader, client_fd).client_max_body_size;
+}
+
 void Server::init(const std::vector<ServerConfig>& servers)
 {
 	for (size_t i = 0; i < servers.size(); ++i)
@@ -110,6 +115,7 @@ void Server::acceptClient(size_t& i)
 		throw std::runtime_error("Fcntl failed");
 	pollfd p = {client_fd, POLLIN, 0};
 	fds.push_back(p);
+	parse[client_fd].setServerContext(this, client_fd);
 }
 
 void Server::readRequest(size_t& i)
@@ -132,6 +138,7 @@ void Server::readRequest(size_t& i)
     HttpRequest& request = parse[fd].getRequest();
 	try
 	{
+		parse[fd].resolveMaxBodySize();
 		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
 			return ;		
 		std::cout << request.getMethod()

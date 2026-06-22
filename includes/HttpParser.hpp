@@ -30,6 +30,8 @@ enum ParseResult {
     COMPLETE,
 };
 
+class Server;
+
 class HttpParser
 {
     private:
@@ -55,6 +57,9 @@ class HttpParser
         BodyType	_bodyType;
         ChunkState  _chunkState;
 		int			_errorCode;
+        size_t      _maxBodySize;
+        Server*     _server;
+        int         _clientFd;
 
 		ParseResult		parseRequestLine( void );
 		ParseResult		parseHeaders( void );
@@ -69,6 +74,8 @@ class HttpParser
         HttpParser();
         ~HttpParser();
         void                clearRequest( void );
+        void                setServerContext(Server* server, int clientFd);
+        void                resolveMaxBodySize( void );
 		ParseResult         parseRequest(const std::string& data);
 		HttpRequest&        getRequest( void );
         void                setErrorCode(StatusCode statusCode);

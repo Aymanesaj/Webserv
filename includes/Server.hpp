@@ -21,6 +21,7 @@ class Server
         void init(const std::vector<ServerConfig>& servers);
         void run();
         ~Server();
+        size_t getClientMaxBodySize(const std::string& hostHeader, int client_fd);
 
     private:
         ServerConfig&   getServer(std::string host, int fd);

@@ -1,12 +1,27 @@
 #include "../includes/HttpParser.hpp"
+#include "../includes/Server.hpp"
 
 HttpParser::HttpParser()
-    : _state(REQUEST_LINE), _expectedBodySize(0), _bodyType(NO_BODY), 
-    _chunkState(CHUNK_SIZE), _errorCode(0)
+    : _state(REQUEST_LINE), _expectedBodySize(0), _receivedBodySize(0), _bodyType(NO_BODY),
+    _chunkState(CHUNK_SIZE), _errorCode(0), _maxBodySize(0), _server(NULL), _clientFd(-1)
 {
 }
 
 HttpParser::~HttpParser() {}
+
+void HttpParser::setServerContext(Server* server, int clientFd)
+{
+    this->_server = server;
+    this->_clientFd = clientFd;
+}
+
+void HttpParser::resolveMaxBodySize( void )
+{
+    const std::map<std::string, std::string>& headers = this->_request.getHeaders();
+
+    if (this->_server != NULL && this->_clientFd >= 0 && headers.count("Host"))
+        this->_maxBodySize = this->_server->getClientMaxBodySize(headers.at("Host"), this->_clientFd);
+}
 
 ParseResult		HttpParser::parseRequest(const std::string& data)
 {
@@ -143,6 +158,7 @@ ParseResult HttpParser::parseHeaders( void )
         setErrorCode(BAD_REQUEST);
     this->_request.setHeaders(map);
     this->_state = BODY;
+    this->resolveMaxBodySize();
     this->setBodyType(map);
     if (this->_buffer.compare(0, 2, "\r\n") == 0)
         this->_buffer.erase(0, 2); // for the empty line after headers
@@ -192,6 +208,9 @@ void    HttpParser::setBodyType( const std::map<std::string, std::string>& heade
         long contentLength = strtol(headers.find("Content-length")->second.c_str(), &endptr, 10);
         if (this->_request.getMethod() != "POST" || contentLength < 0 || *endptr)
             setErrorCode(BAD_REQUEST);
+        else if (this->_maxBodySize > 0
+            && static_cast<size_t>(contentLength) > this->_maxBodySize)
+            setErrorCode(CONTENT_TOO_LARGE);
         else
         {
             this->_bodyType = CONTENT_LENGTH;
@@ -235,6 +254,10 @@ ParseResult HttpParser::parseChunkBody( void )
                 chunkSize = strtol(tmp.c_str(), &endptr, 16);
                 if (*endptr || chunkSize < 0)
                     setErrorCode(BAD_REQUEST);
+                if (this->_maxBodySize > 0
+                    && (static_cast<size_t>(chunkSize) > this->_maxBodySize
+                    || this->_receivedBodySize + static_cast<size_t>(chunkSize) > this->_maxBodySize))
+                    setErrorCode(CONTENT_TOO_LARGE);
                 if (chunkSize == 0)
                     result = COMPLETE;
                 else
@@ -302,4 +325,5 @@ void    HttpParser::clearRequest( void )
     this->_bodyType = NO_BODY;
     this->_chunkState = CHUNK_SIZE;
     this->_errorCode = 0;
+    this->_maxBodySize = 0;
 }

@@ -10,6 +10,9 @@ std::string	execCGI(char **argv, char *root)
 		throw std::runtime_error("pipe error.");
 	if (pipe(pipe_out) == -1)
 		throw std::runtime_error("pipe error.");
+	// int flags = fcntl(fd, F_GETFL, 0);
+	// if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+	// 	throw std::runtime_error("Fcntl failed");
 	pid = fork();
 	if (pid == -1)
 		throw std::runtime_error("fork error.");

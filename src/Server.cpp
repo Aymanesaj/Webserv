@@ -82,20 +82,27 @@ void Server::run()
 		if (!ready)
 			continue;
 		if (ready < 0)
-			throw std::runtime_error("Poll failed");
+			continue;
 		for (size_t i = 0; i < fds.size(); ++i)
 		{
 			if (fds[i].revents & (POLLHUP | POLLERR))
 			{
-				removeClient(i);
+				if (!listening_sockets.count(fds[i].fd))
+					removeClient(i);
 				continue;
 			}
+			if (fds[i].revents & POLLOUT)
+				writeResponse(i);
 			if (fds[i].revents & POLLIN)
 			{
 				if (listening_sockets.count(fds[i].fd))
 					acceptClient(i);
 				else
-					readRequest(i);
+				{
+					std::map<int, ClientState>::iterator it = clients.find(fds[i].fd);
+					if (it == clients.end() || it->second.outbuf.empty())
+						readRequest(i);
+				}
 			}
 			fds[i].revents = 0;
 		}
@@ -110,6 +117,7 @@ void Server::acceptClient(size_t& i)
 	if (client_fd < 0)
 		return ;
 	client_to_server_socket[client_fd] = fds[i].fd;
+	clients[client_fd] = ClientState();
 	int flags = fcntl(client_fd, F_GETFL, 0);
 	if (flags < 0 || fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) < 0)
 		throw std::runtime_error("Fcntl failed");
@@ -118,29 +126,60 @@ void Server::acceptClient(size_t& i)
 	parse[client_fd].setServerContext(this, client_fd);
 }
 
+void Server::queueResponse(size_t& i, const std::string& resp, bool closeAfter)
+{
+	int fd = fds[i].fd;
+	clients[fd].outbuf += resp;
+	clients[fd].closeAfterWrite = closeAfter;
+	fds[i].events |= POLLOUT;
+	writeResponse(i);
+}
+
+void Server::writeResponse(size_t& i)
+{
+	int fd = fds[i].fd;
+	std::map<int, ClientState>::iterator it = clients.find(fd);
+	if (it == clients.end() || it->second.outbuf.empty())
+	{
+		fds[i].events &= ~POLLOUT;
+		return ;
+	}
+	ClientState& state = it->second;
+	ssize_t n = write(fd, state.outbuf.c_str(), state.outbuf.size());
+	if (n > 0)
+		state.outbuf.erase(0, n);
+	else if (n < 0)
+		return ;
+	if (!state.outbuf.empty())
+		return ;
+	fds[i].events &= ~POLLOUT;
+	if (state.closeAfterWrite)
+		removeClient(i);
+	else{
+		fds[i].events |= POLLIN;
+		parse[fd].clearRequest();
+	}
+}
+
 void Server::readRequest(size_t& i)
 {
-	char buffer[65536]; // 64KB buffer
+	char buffer[65536];
 	int fd = fds[i].fd;
 	ssize_t bytes = read(fd, buffer, sizeof(buffer));
-	if (bytes <= 0){
+	if (bytes == 0)
+	{
 		removeClient(i);
 		return ;
-	} 
-	// else if (static_cast<unsigned char>(buffer[0]) == 0x16)
-	// {
-	// 	std::cerr << "TLS Handshake received : BUT HTTPS NOT SUPPORTED" << std::endl;
-	// 	removeClient(i);
-	// 	return ;
-	// }
-	connections[fd].assign(buffer, bytes);
+	}
+	if (bytes < 0)
+		return ;
     HttpResponse response;
     HttpRequest& request = parse[fd].getRequest();
 	try
 	{
 		parse[fd].resolveMaxBodySize();
-		if (parse[fd].parseRequest(connections[fd]) == INCOMPLETE)
-			return ;		
+		if (parse[fd].parseRequest(std::string(buffer, bytes)) == INCOMPLETE)
+			return ;
 		std::cout << request.getMethod()
             << " " << request.getPath()
             << " " << request.getVersion()
@@ -150,8 +189,7 @@ void Server::readRequest(size_t& i)
 	{
 		std::cout << e.what() << " : " << static_cast<StatusCode>(parse[fd].getErrorCode()) << std::endl;
 		std::string error_resp = response.errorResponse(static_cast<StatusCode>(parse[fd].getErrorCode()));
-		write(fd, error_resp.c_str(), error_resp.size());
-		removeClient(i);
+		queueResponse(i, error_resp, true);
 		return ;
 	}
 	this->sessions_manager.setUpSession(request);
@@ -161,19 +199,17 @@ void Server::readRequest(size_t& i)
 	if (isLogout)
 		this->sessions_manager.removeSession(request.getSession().getId());
 	std::cout << " -> " << response.getStatusCode() << std::endl;
-	write(fd, raw_resp.c_str(), raw_resp.size());
-	if (parse[fd].getRequest().getHeaders().at("Connection") == "close")
-		removeClient(i);
-	else
-		parse[fd].clearRequest();
+	bool closeConn = (parse[fd].getRequest().getHeaders().at("Connection") == "close");
+	queueResponse(i, raw_resp, closeConn);
 }
 
 void Server::removeClient(size_t& i)
 {
 	int fd = fds[i].fd;
 	close(fd);
-	connections.erase(fd);
 	fds.erase(fds.begin() + i);
 	parse.erase(fd);
-	if (i > 0) --i;
+	client_to_server_socket.erase(fd);
+	clients.erase(fd);
+	--i;
 }

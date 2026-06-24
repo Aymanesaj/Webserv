@@ -3,12 +3,13 @@
 #include "../includes/HttpParser.hpp"
 #include "../includes/HttpResponse.hpp"
 
+volatile sig_atomic_t Server::flag = 1;
+
 Server::~Server()
 {
 	for (size_t i = 0; i < fds.size(); i++)
 		close(fds[i].fd);
 }
-
 
 ServerConfig& Server::getServer(const std::string hostHeader, int client_fd)
 {
@@ -37,8 +38,16 @@ size_t Server::getClientMaxBodySize(const std::string& hostHeader, int client_fd
     return getServer(hostHeader, client_fd).client_max_body_size;
 }
 
+void Server::signal_handler(int)
+{
+	flag = 0;
+}
+
 void Server::init(const std::vector<ServerConfig>& servers)
 {
+	signal(SIGINT, signal_handler);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, signal_handler);
 	for (size_t i = 0; i < servers.size(); ++i)
 	{
 		std::pair<std::string,int> key = std::make_pair(servers[i].host, servers[i].listen_port);
@@ -77,7 +86,7 @@ void Server::init(const std::vector<ServerConfig>& servers)
 
 void Server::run()
 {
-	while (true){
+	while (flag){
 		int ready = poll(fds.data(), fds.size(), -1);
 		if (!ready)
 			continue;

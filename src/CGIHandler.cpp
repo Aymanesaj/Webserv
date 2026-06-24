@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "../includes/Server.hpp"
 
 std::string	execCGI(char **argv, char *root)
 {

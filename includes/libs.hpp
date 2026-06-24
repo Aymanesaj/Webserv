@@ -22,5 +22,6 @@
 #include <sys/stat.h>
 #include <wait.h>
 #include <dirent.h>
+#include <signal.h>
 
 #endif

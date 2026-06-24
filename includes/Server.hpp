@@ -1,7 +1,5 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
-
-#include "libs.hpp"
 #include "Config.hpp"
 #include "SessionManager.hpp"
 #include "HttpParser.hpp"
@@ -24,6 +22,7 @@ class Server
         std::map<int, HttpParser> parse;
         std::map<int, int> client_to_server_socket;
         std::map<int, ClientState> clients;
+        static volatile sig_atomic_t flag;
     public:
         void init(const std::vector<ServerConfig>& servers);
         void run();
@@ -31,6 +30,7 @@ class Server
         size_t getClientMaxBodySize(const std::string& hostHeader, int client_fd);
 
     private:
+        static void signal_handler(int signum);
         ServerConfig&   getServer(std::string host, int fd);
         void acceptClient(size_t& i);
         void readRequest(size_t& i);

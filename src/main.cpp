@@ -1,6 +1,5 @@
 #include "../includes/Config.hpp"
 #include "../includes/HttpParser.hpp"
-#include "../includes/HttpResponse.hpp"
 #include "../includes/Server.hpp"
 
 int main(int argc, char **argv)

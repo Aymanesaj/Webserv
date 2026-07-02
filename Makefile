@@ -13,7 +13,8 @@ SRC = \
 	src/HttpRequest.cpp src/Utils.cpp \
 	src/HttpResponse.cpp \
 	src/methods/GET.cpp src/methods/POST.cpp src/methods/DELETE.cpp \
-	src/SessionManager.cpp
+	src/SessionManager.cpp \
+	src/CGIUtils.cpp \
 
 OBJ = $(SRC:.cpp=.o)
 

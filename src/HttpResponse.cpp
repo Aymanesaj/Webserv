@@ -125,6 +125,7 @@ std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
         case INTERNAL_SERVER_ERROR: return "www/error/500.html";
         case NOT_IMPLEMENTED: return "www/error/501.html";
         case HTTP_VERSION_NOT_SUPPORTED: return "www/error/505.html";
+        case GATEWAY_TIMEOUT: return "www/error/504.html";
         default: return "www/error/400.html";
     }
 }

@@ -208,24 +208,59 @@ void ConfigParser::parse()
 	}
 }
 
-LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
+// LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
+// {
+//     int best_match_length = -1;
+//     int bestIndex = -1;
+
+//     for (int i = 0; i < (int)server.locations.size(); i++)
+//     {
+//         if (uri.find(server.locations[i].path) == 0)
+//         {
+//             if ((int)server.locations[i].path.length() > best_match_length)
+//             {
+//                 best_match_length = server.locations[i].path.length();
+//                 bestIndex = i;
+//             }
+//         }
+//     }
+//     if (bestIndex == -1)
+//         throw std::runtime_error("Location not found");
+//     return server.locations[bestIndex];
+// }
+
+LocationConfig ConfigParser::findLocation(const std::string& uri,
+                                          const ServerConfig& server)
 {
-    int best_match_length = -1;
+    size_t bestLength = 0;
     int bestIndex = -1;
 
-    for (int i = 0; i < (int)server.locations.size(); i++)
+    for (size_t i = 0; i < server.locations.size(); ++i)
     {
-        if (uri.find(server.locations[i].path) == 0)
+        const std::string &loc = server.locations[i].path;
+
+        if (uri.compare(0, loc.size(), loc) != 0)
+            continue;
+        if (uri.size() == loc.size())
         {
-            if ((int)server.locations[i].path.length() > best_match_length)
+            if (loc.size() > bestLength)
             {
-                best_match_length = server.locations[i].path.length();
+                bestLength = loc.size();
+                bestIndex = i;
+            }
+        }
+        else if (loc == "/" || (uri.size() > loc.size() && uri[loc.size()] == '/'))
+        {
+            if (loc.size() > bestLength)
+            {
+                bestLength = loc.size();
                 bestIndex = i;
             }
         }
     }
     if (bestIndex == -1)
         throw std::runtime_error("Location not found");
+
     return server.locations[bestIndex];
 }
 

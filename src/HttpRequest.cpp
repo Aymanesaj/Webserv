@@ -132,3 +132,23 @@ void HttpRequest::generateTempFile( void )
     this->body_file = fd;
 }
 
+const std::string& HttpRequest::getQuery( void ) const
+{
+    static std::string query;
+    size_t pos = this->path.find('?');
+
+    if (pos != std::string::npos)
+        query = this->path.substr(pos + 1);
+    else
+        query.clear();
+    return query;
+}
+
+const std::string& HttpRequest::getContentType( void ) const
+{
+    static const std::string empty;
+    if (this->headers.find("Content-Type") != this->headers.end())
+        return this->headers.at("Content-Type");
+    return empty;
+}
+

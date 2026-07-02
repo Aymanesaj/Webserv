@@ -9,6 +9,7 @@ struct	ServerConfig;
 
 class HttpResponse
 {
+	friend class CGI;
     private:
 		ServerConfig						_server;
 		StatusCode							_statusCode;
@@ -24,6 +25,7 @@ class HttpResponse
 		void			setBody(const std::string& body);
 		void			setCookie(const std::string& cookie);
 		std::string		getMimeType( const std::string& path ) const;
+		std::string 	handleCGI(HttpRequest& request);
 		std::string		handleGET(HttpRequest& request);
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);
@@ -36,6 +38,7 @@ class HttpResponse
 		std::string		handleUpload(HttpRequest& request, const LocationConfig& location);
 		std::string		handleRawBody(HttpRequest& request, const LocationConfig& location);
 		std::string		handleMultipartBody(HttpRequest& request, const LocationConfig& location);
+		bool 			isCGI(const std::string& path);
 	public:
         HttpResponse();
 		void			setServer( ServerConfig _server );

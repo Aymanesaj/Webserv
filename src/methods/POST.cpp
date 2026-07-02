@@ -282,6 +282,10 @@ std::string   HttpResponse::handleUpload(HttpRequest& request, const LocationCon
 
 std::string     HttpResponse::handlePOST(HttpRequest& request)
 {
+    // Check if the requested resource is a CGI script
+    if (HttpResponse::isCGI(request.getPath()))
+        return (this->handleCGI(request));
+
     std::string response_html;
 
     int fd = open(request.getBodyFilePath().c_str(), O_RDONLY);

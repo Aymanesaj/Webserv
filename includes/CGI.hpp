@@ -8,11 +8,12 @@ class CGI : protected HttpResponse
         std::map<std::string, std::string>  _env;
         HttpRequest&                        _request;
         LocationConfig&                     _location;
+        std::vector<std::string> _envStrings;
+        std::vector<char*> _envPointers;
 
 		void         buildEnv();
-        char**       getEnvArray();
+        void         buildEnvArray();
         std::string  parseOutput(const std::string& output);
-        void         freeEnvArray(char** env);
 		
     public:
         

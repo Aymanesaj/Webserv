@@ -2,78 +2,66 @@
 
 std::string CGI::execute()
 {
-    int         pi_in[2], pi_out[2], status;
+    int pi_in[2], pi_out[2], int_fd, status;
+    pid_t pid;
+    char *args[3];
     std::string dir, output;
-    pid_t       pid;
-    char**      envp;
-    char*       args[3];
-    char        buffer[4096];
-    ssize_t     bytesRead;
+    char buffer[4096];
+    ssize_t bytesRead;
 
     buildEnv();
-    envp = getEnvArray();
+    buildEnvArray();
 
-    if (pipe(pi_in) == -1 || pipe(pi_out) == -1)
+    if (pipe(pi_in) == -1)
+        return (errorResponse(INTERNAL_SERVER_ERROR));
+    if (pipe(pi_out) == -1)
     {
-        freeEnvArray(envp);
-        return errorResponse(INTERNAL_SERVER_ERROR);
+        close(pi_in[0]);
+        close(pi_in[1]);
+        return (errorResponse(INTERNAL_SERVER_ERROR));
     }
-
     pid = fork();
-
     if (pid < 0)
     {
-        freeEnvArray(envp);
-        return errorResponse(INTERNAL_SERVER_ERROR);
-    }
-
-    if (pid == 0)
-    {
-        // Child
+        close(pi_in[0]);
         close(pi_in[1]);
         close(pi_out[0]);
-
+        close(pi_out[1]);
+        return (errorResponse(INTERNAL_SERVER_ERROR));
+    }
+    if (pid == 0)
+    {
+        close(pi_in[1]);
+        close(pi_out[0]);
         dup2(pi_in[0], STDIN_FILENO);
         dup2(pi_out[1], STDOUT_FILENO);
-
-        close(pi_in[0]);
-        close(pi_out[1]);
-
         dir = _script_path.substr(0, _script_path.find_last_of('/'));
         chdir(dir.c_str());
-
-        args[0] = (char *)_interpreter.c_str();
-        args[1] = (char *)_script_path.c_str();
+        args[0] =const_cast<char*>(_interpreter.c_str());
+        args[1] =const_cast<char*>(_script_path.c_str());
         args[2] = NULL;
-
-        execve(args[0], args, envp);
-
-        freeEnvArray(envp);
+        execve(args[0], args, &_envPointers[0]);
         exit(1);
     }
-
-    // Parent
-    close(pi_in[0]);
-    close(pi_out[1]);
-
-    // Make stdout pipe non-blocking
-    fcntl(pi_out[0], F_SETFL, O_NONBLOCK);
-
-    // Send POST body to CGI
     if (_request.getMethod() == "POST")
     {
-        char bodyBuffer[4096];
-        ssize_t n;
-        int bodyFd = _request.getBody();
+        int_fd = _request.getBody();
+        if (int_fd < 0)
+        {
+            close(pi_in[1]);
+            close(pi_out[0]);
+            kill(pid, SIGKILL);
+            waitpid(pid, NULL, 0);
+            return (errorResponse(INTERNAL_SERVER_ERROR));
+        }
 
-        while ((n = read(bodyFd, bodyBuffer, sizeof(bodyBuffer))) > 0)
-            write(pi_in[1], bodyBuffer, n);
+        lseek(int_fd, 0, SEEK_SET);
+        while ((bytesRead = read(int_fd, buffer, sizeof(buffer))) > 0)
+            write(pi_in[1], buffer, bytesRead);
     }
-
-    // Tell CGI stdin is finished
     close(pi_in[1]);
 
-    time_t start = time(NULL);
+        time_t start = time(NULL);
 
     while (true)
     {
@@ -90,7 +78,6 @@ std::string CGI::execute()
         if (ret == -1)
         {
             close(pi_out[0]);
-            freeEnvArray(envp);
             return errorResponse(INTERNAL_SERVER_ERROR);
         }
 
@@ -100,27 +87,24 @@ std::string CGI::execute()
             waitpid(pid, &status, 0);
 
             close(pi_out[0]);
-            freeEnvArray(envp);
-
             return errorResponse(GATEWAY_TIMEOUT);
         }
 
-        usleep(10000); // 10 ms
+        usleep(10000); 
     }
-
-    // Read remaining output after child exits
-    while ((bytesRead = read(pi_out[0], buffer, sizeof(buffer))) > 0)
+        while ((bytesRead = read(pi_out[0], buffer, sizeof(buffer))) > 0)
         output.append(buffer, bytesRead);
 
     close(pi_out[0]);
 
-    freeEnvArray(envp);
 
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
         return errorResponse(INTERNAL_SERVER_ERROR);
 
     return parseOutput(output);
+
 }
+
 std::string HttpResponse::handleCGI(HttpRequest& request)
 {
     LocationConfig location = ConfigParser::findLocation(

@@ -11,9 +11,9 @@ class CGI : protected HttpResponse
         std::vector<std::string> _envStrings;
         std::vector<char*> _envPointers;
 
-		void         buildEnv();
         void         buildEnvArray();
         std::string  parseOutput(const std::string& output);
+		void         buildEnv();
 		
     public:
         

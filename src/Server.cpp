@@ -1,7 +1,7 @@
 #include "../includes/Server.hpp"
 #include "../includes/Config.hpp"
 #include "../includes/HttpParser.hpp"
-#include "../includes/HttpResponse.hpp"
+#include "../includes/CGI.hpp"
 
 volatile sig_atomic_t Server::flag = 1;
 
@@ -87,15 +87,25 @@ void Server::init(const std::vector<ServerConfig>& servers)
 void Server::run()
 {
 	while (flag){
-		int ready = poll(fds.data(), fds.size(), -1);
+		// short timeout to check CGI timeouts periodically
+		int timeout = cgi_processes.empty() ? -1 : 500;
+		int ready = poll(fds.data(), fds.size(), timeout);
 		if (!ready)
+		{
+			checkCgiTimeouts();
 			continue;
+		}
 		if (ready < 0)
 			continue;
 		for (size_t i = 0; i < fds.size(); ++i)
 		{
 			if (fds[i].revents & (POLLHUP | POLLERR))
 			{
+				if (cgi_pipe_fds.count(fds[i].fd))
+				{
+					handleCgiRead(i);
+					continue;
+				}
 				if (!listening_sockets.count(fds[i].fd))
 					removeClient(i);
 				continue;
@@ -106,6 +116,8 @@ void Server::run()
 			{
 				if (listening_sockets.count(fds[i].fd))
 					acceptClient(i);
+				else if (cgi_pipe_fds.count(fds[i].fd))
+					handleCgiRead(i);
 				else
 				{
 					std::map<int, ClientState>::iterator it = clients.find(fds[i].fd);
@@ -115,6 +127,7 @@ void Server::run()
 			}
 			fds[i].revents = 0;
 		}
+		checkCgiTimeouts();
 	}
 }
 
@@ -204,11 +217,72 @@ void Server::readRequest(size_t& i)
 	this->sessions_manager.setUpSession(request);
 	bool isLogout = (request.getPath() == "/logout" && request.getMethod() == "POST");
 	response.setServer(getServer(request.getHeaders().at("Host"), fd));
+	bool closeConn = (parse[fd].getRequest().getHeaders().at("Connection") == "close");
+
+	std::string cgiPath = request.getPath();
+	size_t qpos = cgiPath.find('?');
+	if (qpos != std::string::npos)
+		cgiPath = cgiPath.substr(0, qpos);
+	LocationConfig location = ConfigParser::findLocation(cgiPath, getServer(request.getHeaders().at("Host"), fd));
+	if (response.isCGI(request.getPath(), location))
+	{
+		std::string path = location.root + cgiPath;
+		if (!location.has_cgi_path || !location.has_cgi_extension
+			|| access(location.cgi_path.c_str(), X_OK) != 0)
+		{
+			std::string err = response.errorResponse(INTERNAL_SERVER_ERROR);
+			std::cout << " -> " << response.getStatusCode() << std::endl;
+			queueResponse(i, err, closeConn);
+			return ;
+		}
+		std::ifstream check(path.c_str());
+		if (!check.is_open())
+		{
+			std::string err = response.errorResponse(NOT_FOUND);
+			std::cout << " -> " << response.getStatusCode() << std::endl;
+			queueResponse(i, err, closeConn);
+			return ;
+		}
+		check.close();
+
+		CGI cgi(request, location, path, response);
+		CgiProcessInfo info = cgi.startProcess();
+		if (!info.ok)
+		{
+			std::string err = response.errorResponse(INTERNAL_SERVER_ERROR);
+			std::cout << " -> " << response.getStatusCode() << std::endl;
+			queueResponse(i, err, closeConn);
+			return ;
+		}
+
+		// Register the CGI pipe fd in the poll loop
+		CgiState state;
+		state.pid = info.pid;
+		state.pipeFd = info.pipeFd;
+		state.clientFd = fd;
+		state.startTime = time(NULL);
+		state.response = response;
+		state.request = &request;
+		state.closeConn = closeConn;
+
+		cgi_processes[info.pipeFd] = state;
+		cgi_pipe_fds.insert(info.pipeFd);
+
+		pollfd p = {info.pipeFd, POLLIN, 0};
+		fds.push_back(p);
+
+		// Stop listening for reads on the client fd while CGI runs
+		fds[i].events &= ~POLLIN;
+
+		if (isLogout)
+			this->sessions_manager.removeSession(request.getSession().getId());
+		return ;
+	}
+
 	std::string raw_resp = response.handleRequest(request);
 	if (isLogout)
 		this->sessions_manager.removeSession(request.getSession().getId());
 	std::cout << " -> " << response.getStatusCode() << std::endl;
-	bool closeConn = (parse[fd].getRequest().getHeaders().at("Connection") == "close");
 	queueResponse(i, raw_resp, closeConn);
 }
 
@@ -221,4 +295,131 @@ void Server::removeClient(size_t& i)
 	client_to_server_socket.erase(fd);
 	clients.erase(fd);
 	--i;
+}
+
+size_t Server::findFdIndex(int fd)
+{
+	for (size_t i = 0; i < fds.size(); ++i)
+	{
+		if (fds[i].fd == fd)
+			return i;
+	}
+	return fds.size(); // not found
+}
+
+void Server::handleCgiRead(size_t& i)
+{
+	int pipeFd = fds[i].fd;
+	std::map<int, CgiState>::iterator it = cgi_processes.find(pipeFd);
+	if (it == cgi_processes.end())
+		return ;
+
+	CgiState& state = it->second;
+	char buffer[4096];
+	ssize_t bytesRead = read(pipeFd, buffer, sizeof(buffer));
+
+	if (bytesRead > 0)
+	{
+		state.outputBuf.append(buffer, bytesRead);
+		return ;
+	}
+
+	int status = 0;
+	pid_t ret = waitpid(state.pid, &status, WNOHANG);
+	if (ret == 0)
+	{
+		usleep(1000);
+		ret = waitpid(state.pid, &status, WNOHANG);
+		if (ret == 0)
+		{
+			kill(state.pid, SIGKILL);
+			waitpid(state.pid, &status, 0);
+		}
+	}
+	else if (ret == -1)
+		status = -1;
+
+	finalizeCgiResponse(pipeFd, status);
+}
+
+void Server::checkCgiTimeouts()
+{
+	time_t now = time(NULL);
+	std::vector<int> timedOut;
+
+	for (std::map<int, CgiState>::iterator it = cgi_processes.begin();
+		 it != cgi_processes.end(); ++it)
+	{
+		if (now - it->second.startTime >= 5)
+			timedOut.push_back(it->first);
+	}
+
+	for (size_t j = 0; j < timedOut.size(); ++j)
+	{
+		int pipeFd = timedOut[j];
+		CgiState& state = cgi_processes[pipeFd];
+
+		kill(state.pid, SIGKILL);
+		int status;
+		waitpid(state.pid, &status, 0);
+
+		std::string err = state.response.errorResponse(GATEWAY_TIMEOUT);
+		size_t clientIdx = findFdIndex(state.clientFd);
+		if (clientIdx < fds.size())
+		{
+			fds[clientIdx].events |= POLLIN;
+			queueResponse(clientIdx, err, state.closeConn);
+		}
+
+		size_t pipeIdx = findFdIndex(pipeFd);
+		if (pipeIdx < fds.size())
+		{
+			close(pipeFd);
+			fds.erase(fds.begin() + pipeIdx);
+		}
+		cgi_pipe_fds.erase(pipeFd);
+		cgi_processes.erase(pipeFd);
+	}
+}
+
+void Server::finalizeCgiResponse(int pipeFd, int exitStatus)
+{
+	std::map<int, CgiState>::iterator it = cgi_processes.find(pipeFd);
+	if (it == cgi_processes.end())
+		return ;
+
+	CgiState& state = it->second;
+	std::string raw_resp;
+
+	if (exitStatus == -1 || (WIFEXITED(exitStatus) && WEXITSTATUS(exitStatus) != 0))
+	{
+		raw_resp = state.response.errorResponse(INTERNAL_SERVER_ERROR);
+	}
+	else
+	{
+		LocationConfig location = ConfigParser::findLocation(
+			state.request->getPath(),
+			getServer(state.request->getHeaders().at("Host"), state.clientFd));
+		std::string path = location.root + state.request->getPath();
+		CGI cgi(*state.request, location, path, state.response);
+		raw_resp = cgi.parseOutput(state.outputBuf);
+	}
+
+	std::cout << " -> " << state.response.getStatusCode() << std::endl;
+	size_t clientIdx = findFdIndex(state.clientFd);
+	if (clientIdx < fds.size())
+	{
+		fds[clientIdx].events |= POLLIN;
+		queueResponse(clientIdx, raw_resp, state.closeConn);
+	}
+
+	size_t pipeIdx = findFdIndex(pipeFd);
+	if (pipeIdx < fds.size())
+	{
+		close(pipeFd);
+		fds.erase(fds.begin() + pipeIdx);
+	}
+
+	cgi_pipe_fds.erase(pipeFd);
+	cgi_processes.erase(pipeFd);
 }

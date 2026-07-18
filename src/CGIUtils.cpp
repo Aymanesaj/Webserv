@@ -1,33 +1,38 @@
 #include "../includes/CGI.hpp"
 
-bool HttpResponse::isCGI(const std::string& path)
+bool HttpResponse::isCGI(const std::string& path, const LocationConfig& location)
 {
-	if (path.find(".php") != std::string::npos
-		|| path.find(".py") != std::string::npos)
-		return true;
-	return false;
+	if (!location.has_cgi_path || !location.has_cgi_extension)
+		return false;
+	const std::string& ext = location.cgi_ext;
+	std::string cleanPath = path;
+	size_t qpos = cleanPath.find('?');
+	if (qpos != std::string::npos)
+		cleanPath = cleanPath.substr(0, qpos);
+	if (cleanPath.size() < ext.size())
+		return false;
+	return cleanPath.compare(cleanPath.size() - ext.size(), ext.size(), ext) == 0;
 }
 
 void CGI::buildEnv()
 {
-std::string uri = _request.getPath();
-std::string script_name;
-std::string path_info;
-size_t pos = std::string::npos;
+	std::string uri = _request.getPath();
+	std::string script_name;
+	std::string path_info;
+	size_t pos = std::string::npos;
+	const std::string& ext = _location.cgi_ext;
 
-if ((pos = uri.find(".php")) != std::string::npos)
-    pos += 4;         
-else if ((pos = uri.find(".py")) != std::string::npos)
-    pos += 3;          
-if (pos != std::string::npos)
-{
-    script_name = uri.substr(0, pos);
-    path_info = uri.substr(pos);
-}
+	pos = uri.find(ext);
+	if (pos != std::string::npos)
+	{
+		pos += ext.size();
+		script_name = uri.substr(0, pos);
+		path_info = uri.substr(pos);
+	}
 	_env["REQUEST_METHOD"] = _request.getMethod();
 	_env["QUERY_STRING"] = _request.getQuery();
 	_env["CONTENT_TYPE"] = _request.getContentType();
-	_env["CONTENT_LENGTH"] = Utils::to_string_c98(_request.getBody());
+	_env["CONTENT_LENGTH"] = Utils::to_string_c98(static_cast<int>(_request.getBodySize()));
 	_env["SCRIPT_FILENAME"] = _script_path;
 	_env["SCRIPT_NAME"] = script_name;
 	_env["PATH_INFO"] = path_info;
@@ -65,7 +70,7 @@ std::string CGI::parseOutput(const std::string& output)
 	std::map<std::string, std::string>::iterator it;
 
 	if (output.empty())
-		return (this->errorResponse(INTERNAL_SERVER_ERROR));
+		return (_response.errorResponse(INTERNAL_SERVER_ERROR));
 
 	pos = output.find("\r\n\r\n");
 	if (pos != std::string::npos)
@@ -95,30 +100,48 @@ std::string CGI::parseOutput(const std::string& output)
 		{
 			key = line.substr(0, colon);
 			value = line.substr(colon + 1);
+			Utils::trim(value);
 			headers_map[key] = value;
 		}
+	}
+	StatusCode statusCode = OK;
+	if (headers_map.find("Status") != headers_map.end())
+	{
+		std::string statusStr = headers_map["Status"];
+		int code = std::atoi(statusStr.c_str());
+		if (code >= 100 && code <= 599)
+			statusCode = static_cast<StatusCode>(code);
+		headers_map.erase("Status");
+	}
+	if (headers_map.find("Location") != headers_map.end())
+	{
+		if (statusCode == OK)
+			statusCode = SEE_OTHER;
+		_response.setStatusCode(statusCode);
+		_response.setHeader("Location", headers_map["Location"]);
+		headers_map.erase("Location");
+		for (it = headers_map.begin(); it != headers_map.end(); it++)
+			_response.setHeader(it->first, it->second);
+		return (_response.build());
 	}
 
 	if (headers_map.find("Content-Type") == headers_map.end())
 		headers_map["Content-Type"] = "text/html";
 
-	this->setStatusCode(OK);
-	this->setBody(body);
-	this->setHeader("Content-Length", Utils::to_string_c98(body.size()));
+	_response.setStatusCode(statusCode);
+	_response.setBody(body);
+	_response.setHeader("Content-Length", Utils::to_string_c98(body.size()));
 
 	for (it = headers_map.begin(); it != headers_map.end(); it++)
-		this->setHeader(it->first, it->second);
+		_response.setHeader(it->first, it->second);
 
-	return (this->build());
+	return (_response.build());
 
 }
 
-CGI::CGI(HttpRequest& request, LocationConfig& location, const std::string& script_path)
-	: _script_path(script_path), _request(request), _location(location)
+CGI::CGI(HttpRequest& request, LocationConfig& location, const std::string& script_path,
+	HttpResponse& response)
+	: _script_path(script_path), _request(request), _location(location), _response(response)
 {
-	if (script_path.find(".php") != std::string::npos)
-		_interpreter = "/usr/bin/php-cgi";
-	else if (script_path.find(".py") != std::string::npos)
-		_interpreter = "/usr/bin/python3";
-
+	_interpreter = location.cgi_path;
 }

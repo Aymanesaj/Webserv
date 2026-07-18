@@ -30,6 +30,7 @@ void HttpResponse::setStatusCode(StatusCode code)
         case INTERNAL_SERVER_ERROR: this->_statusMessage = "Internal Server Error"; break;
         case NOT_IMPLEMENTED: this->_statusMessage = "Not Implemented"; break;
         case HTTP_VERSION_NOT_SUPPORTED: this->_statusMessage = "HTTP Version Not Supported"; break;
+        case GATEWAY_TIMEOUT: this->_statusMessage = "Gateway Timeout"; break;
         default: this->_statusMessage = "Unknown Status"; break;
     }
 }

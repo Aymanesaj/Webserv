@@ -10,12 +10,8 @@ std::string     HttpResponse::handleGET(HttpRequest& request)
         path += location.index;
     if (location.has_return && !location.return_url.empty())
         return this->redirectWithCookie(location.return_url, "");
-    if (location.has_cgi_path && location.has_cgi_extension) // handle CGI here
-    {
-        // std::vector<std::string> split_path = Utils::split(request.getPath(), ".");
-        // if (split_path.size() > 1 && split_path.back() == location.cgi_ext)
-        //     return this->handleCGI(request, location);
-    }
+    if (isCGI(request.getPath(), location))
+        return this->handleCGI(request);
     if (Utils::is_Directory(path)) {
         if (path[path.length() - 1] != '/')
             path += "/";

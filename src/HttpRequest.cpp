@@ -104,6 +104,16 @@ int HttpRequest::getBody( void ) const
     return this->body_file;
 }
 
+size_t HttpRequest::getBodySize( void ) const
+{
+    if (this->body_file_path.empty())
+        return 0;
+    struct stat st;
+    if (stat(this->body_file_path.c_str(), &st) == 0)
+        return static_cast<size_t>(st.st_size);
+    return 0;
+}
+
 Session&  HttpRequest::getSession( void )
 {
     return *this->session;

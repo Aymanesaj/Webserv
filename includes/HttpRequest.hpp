@@ -37,6 +37,7 @@ class HttpRequest
         const std::string&       getQuery( void ) const;
         const std::string&       getContentType( void ) const;
         int                     getBody( void ) const;
+        size_t                  getBodySize( void ) const;
         Session&                getSession( void );
         const std::map<std::string, std::string>&   getHeaders( void ) const;
 };

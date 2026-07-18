@@ -3,12 +3,27 @@
 #include "Config.hpp"
 #include "SessionManager.hpp"
 #include "HttpParser.hpp"
+#include "HttpResponse.hpp"
 
 struct ClientState {
     std::string outbuf;
     bool        closeAfterWrite;
 
     ClientState() : closeAfterWrite(false) {}
+};
+
+struct CgiState {
+    pid_t       pid;
+    int         pipeFd;
+    int         clientFd;
+    time_t      startTime;
+    std::string outputBuf;
+    HttpResponse response;
+    HttpRequest* request;
+    bool        closeConn;
+
+    CgiState() : pid(-1), pipeFd(-1), clientFd(-1), startTime(0),
+                 request(NULL), closeConn(false) {}
 };
 
 class Server
@@ -22,6 +37,8 @@ class Server
         std::map<int, HttpParser> parse;
         std::map<int, int> client_to_server_socket;
         std::map<int, ClientState> clients;
+        std::map<int, CgiState> cgi_processes;
+        std::set<int> cgi_pipe_fds;
         static volatile sig_atomic_t flag;
     public:
         void init(const std::vector<ServerConfig>& servers);
@@ -37,6 +54,10 @@ class Server
         void writeResponse(size_t& i);
         void queueResponse(size_t& i, const std::string& resp, bool closeAfter);
         void removeClient(size_t& i);
+        void handleCgiRead(size_t& i);
+        void checkCgiTimeouts();
+        void finalizeCgiResponse(int pipeFd, int exitStatus);
+        size_t findFdIndex(int fd);
 };
 
 #endif

@@ -3,11 +3,9 @@
 CgiProcessInfo CGI::startProcess()
 {
     CgiProcessInfo info;
-    int pi_in[2], pi_out[2], int_fd;
+    int pi_in[2], pi_out[2];
     char *args[3];
     std::string dir;
-    char buffer[4096];
-    ssize_t bytesRead;
 
     buildEnv();
     buildEnvArray();
@@ -37,6 +35,7 @@ CgiProcessInfo CGI::startProcess()
         close(pi_in[0]);
         dup2(pi_out[1], STDOUT_FILENO);
         close(pi_out[1]);
+        dup2(STDERR_FILENO, "/dev/null");
         dir = _script_path.substr(0, _script_path.find_last_of('/'));
         std::string script_name = _script_path.substr(_script_path.find_last_of('/') + 1);
         chdir(dir.c_str());
@@ -51,22 +50,16 @@ CgiProcessInfo CGI::startProcess()
 
     if (_request.getMethod() == "POST")
     {
-        int_fd = open(_request.getBodyFilePath().c_str(), O_RDONLY);
-        if (int_fd < 0)
-        {
-            close(pi_in[1]);
-            close(pi_out[0]);
-            kill(pid, SIGKILL);
-            waitpid(pid, NULL, 0);
-            return info;
-        }
-        
-        while ((bytesRead = read(int_fd, buffer, sizeof(buffer))) > 0)
-            write(pi_in[1], buffer, bytesRead);
-        
-        close(int_fd);
+        int flags_in = fcntl(pi_in[1], F_GETFL, 0);
+        if (flags_in >= 0)
+            fcntl(pi_in[1], F_SETFL, flags_in | O_NONBLOCK);
+        info.pipeFdIn = pi_in[1];
     }
-    close(pi_in[1]);
+    else
+    {
+        close(pi_in[1]);
+        info.pipeFdIn = -1;
+    }
 
     int flags = fcntl(pi_out[0], F_GETFL, 0);
     if (flags >= 0)

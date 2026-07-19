@@ -14,7 +14,10 @@ struct ClientState {
 
 struct CgiState {
     pid_t       pid;
-    int         pipeFd;
+    int         pipeFd;         // read end of CGI stdout pipe
+    int         pipeFdIn;       // write end of CGI stdin pipe
+    int         bodyFd;         // fd of the POST body file
+    std::string inputBuf;       // buffer for data read from bodyFd
     int         clientFd;
     time_t      startTime;
     std::string outputBuf;
@@ -22,7 +25,7 @@ struct CgiState {
     HttpRequest* request;
     bool        closeConn;
 
-    CgiState() : pid(-1), pipeFd(-1), clientFd(-1), startTime(0),
+    CgiState() : pid(-1), pipeFd(-1), pipeFdIn(-1), bodyFd(-1), clientFd(-1), startTime(0),
                  request(NULL), closeConn(false) {}
 };
 
@@ -39,6 +42,7 @@ class Server
         std::map<int, ClientState> clients;
         std::map<int, CgiState> cgi_processes;
         std::set<int> cgi_pipe_fds;
+        std::map<int, int> cgi_in_to_out; // maps pipeFdIn to pipeFd
         static volatile sig_atomic_t flag;
     public:
         void init(const std::vector<ServerConfig>& servers);
@@ -55,6 +59,7 @@ class Server
         void queueResponse(size_t& i, const std::string& resp, bool closeAfter);
         void removeClient(size_t& i);
         void handleCgiRead(size_t& i);
+        void handleCgiWrite(size_t& i);
         void checkCgiTimeouts();
         void finalizeCgiResponse(int pipeFd, int exitStatus);
         size_t findFdIndex(int fd);

@@ -106,12 +106,22 @@ void Server::run()
 					handleCgiRead(i);
 					continue;
 				}
+				if (cgi_in_to_out.count(fds[i].fd))
+				{
+					handleCgiWrite(i);
+					continue;
+				}
 				if (!listening_sockets.count(fds[i].fd))
 					removeClient(i);
 				continue;
 			}
 			if (fds[i].revents & POLLOUT)
-				writeResponse(i);
+			{
+				if (cgi_in_to_out.count(fds[i].fd))
+					handleCgiWrite(i);
+				else
+					writeResponse(i);
+			}
 			if (fds[i].revents & POLLIN)
 			{
 				if (listening_sockets.count(fds[i].fd))
@@ -265,11 +275,29 @@ void Server::readRequest(size_t& i)
 		state.request = &request;
 		state.closeConn = closeConn;
 
+		if (info.pipeFdIn != -1)
+		{
+			state.pipeFdIn = info.pipeFdIn;
+			state.bodyFd = open(request.getBodyFilePath().c_str(), O_RDONLY);
+			if (state.bodyFd < 0) {
+				// Fallback if open fails
+				close(info.pipeFdIn);
+				state.pipeFdIn = -1;
+			}
+		}
+
 		cgi_processes[info.pipeFd] = state;
 		cgi_pipe_fds.insert(info.pipeFd);
 
 		pollfd p = {info.pipeFd, POLLIN, 0};
 		fds.push_back(p);
+
+		if (state.pipeFdIn != -1)
+		{
+			cgi_in_to_out[state.pipeFdIn] = info.pipeFd;
+			pollfd p_in = {state.pipeFdIn, POLLOUT, 0};
+			fds.push_back(p_in);
+		}
 
 		// Stop listening for reads on the client fd while CGI runs
 		fds[i].events &= ~POLLIN;
@@ -342,6 +370,54 @@ void Server::handleCgiRead(size_t& i)
 	finalizeCgiResponse(pipeFd, status);
 }
 
+void Server::handleCgiWrite(size_t& i)
+{
+	int pipeFdIn = fds[i].fd;
+	std::map<int, int>::iterator it_map = cgi_in_to_out.find(pipeFdIn);
+	if (it_map == cgi_in_to_out.end())
+		return ;
+
+	int pipeFd = it_map->second;
+	std::map<int, CgiState>::iterator it_state = cgi_processes.find(pipeFd);
+	if (it_state == cgi_processes.end())
+		return ;
+
+	CgiState& state = it_state->second;
+
+	if (state.inputBuf.empty() && state.bodyFd != -1)
+	{
+		char buffer[8192];
+		ssize_t bytesRead = read(state.bodyFd, buffer, sizeof(buffer));
+		if (bytesRead > 0)
+			state.inputBuf.append(buffer, bytesRead);
+		else
+		{
+			// EOF or error reading temp file
+			close(state.bodyFd);
+			state.bodyFd = -1;
+		}
+	}
+
+	if (!state.inputBuf.empty())
+	{
+		ssize_t bytesWritten = write(pipeFdIn, state.inputBuf.c_str(), state.inputBuf.size());
+		if (bytesWritten > 0)
+			state.inputBuf.erase(0, bytesWritten);
+		else if (bytesWritten < 0)
+			return ; // EAGAIN or error, try again later
+	}
+
+	if (state.inputBuf.empty() && state.bodyFd == -1)
+	{
+		// Done writing all data
+		close(pipeFdIn);
+		fds.erase(fds.begin() + i);
+		--i;
+		cgi_in_to_out.erase(pipeFdIn);
+		state.pipeFdIn = -1;
+	}
+}
+
 void Server::checkCgiTimeouts()
 {
 	time_t now = time(NULL);
@@ -377,6 +453,21 @@ void Server::checkCgiTimeouts()
 			close(pipeFd);
 			fds.erase(fds.begin() + pipeIdx);
 		}
+		if (state.pipeFdIn != -1)
+		{
+			size_t inIdx = findFdIndex(state.pipeFdIn);
+			if (inIdx < fds.size())
+				fds.erase(fds.begin() + inIdx);
+			close(state.pipeFdIn);
+			cgi_in_to_out.erase(state.pipeFdIn);
+			state.pipeFdIn = -1;
+		}
+		if (state.bodyFd != -1)
+		{
+			close(state.bodyFd);
+			state.bodyFd = -1;
+		}
+
 		cgi_pipe_fds.erase(pipeFd);
 		cgi_processes.erase(pipeFd);
 	}
@@ -418,6 +509,21 @@ void Server::finalizeCgiResponse(int pipeFd, int exitStatus)
 	{
 		close(pipeFd);
 		fds.erase(fds.begin() + pipeIdx);
+	}
+
+	if (state.pipeFdIn != -1)
+	{
+		size_t inIdx = findFdIndex(state.pipeFdIn);
+		if (inIdx < fds.size())
+			fds.erase(fds.begin() + inIdx);
+		close(state.pipeFdIn);
+		cgi_in_to_out.erase(state.pipeFdIn);
+		state.pipeFdIn = -1;
+	}
+	if (state.bodyFd != -1)
+	{
+		close(state.bodyFd);
+		state.bodyFd = -1;
 	}
 
 	cgi_pipe_fds.erase(pipeFd);

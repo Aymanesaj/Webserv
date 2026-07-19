@@ -210,7 +210,11 @@ void    HttpParser::setBodyType( const std::map<std::string, std::string>& heade
             setErrorCode(BAD_REQUEST);
         else if (this->_maxBodySize > 0
             && static_cast<size_t>(contentLength) > this->_maxBodySize)
+        {
+            std::cout << "CONTENT_TOO_LARGE! contentLength=" << contentLength 
+                      << ", maxBodySize=" << this->_maxBodySize << std::endl;
             setErrorCode(CONTENT_TOO_LARGE);
+        }
         else
         {
             this->_bodyType = CONTENT_LENGTH;

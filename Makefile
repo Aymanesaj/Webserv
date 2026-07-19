@@ -8,7 +8,6 @@ SRC = \
 	src/Server.cpp \
 	src/ConfigParser.cpp \
 	src/HttpParser.cpp \
-	src/Router.cpp \
 	src/CGIHandler.cpp \
 	src/CGIUtils.cpp \
 	src/HttpRequest.cpp src/Utils.cpp \

@@ -16,21 +16,10 @@ std::string     HttpResponse::handleDELETE(HttpRequest& request)
         return errorResponse(NOT_FOUND);
     if (S_ISDIR(file_stat.st_mode))
         return errorResponse(FORBIDDEN);
+    if (access(path.c_str(), W_OK) != 0)
+        return errorResponse(FORBIDDEN);
     if (remove(path.c_str()) != 0)
-    {
-        switch (errno)
-        {
-            case ENOENT:
-                return errorResponse(NOT_FOUND);
-
-            case EACCES:
-            case EPERM:
-                return errorResponse(FORBIDDEN);
-
-            default:
-                return errorResponse(INTERNAL_SERVER_ERROR);
-        }
-    }
+        return errorResponse(INTERNAL_SERVER_ERROR);
     this->setStatusCode(NO_CONTENT);
     this->setBody("");
     this->setHeader("Content-Length", "0");

@@ -20,7 +20,7 @@ class HttpResponse
 
 		void			setMimeTypes( void );
 		std::string		getMimeType( const std::string& path ) const;
-		std::string 	handleCGI(HttpRequest& request);
+
 		std::string		handleGET(HttpRequest& request);
 		std::string		handlePOST(HttpRequest& request);
 		std::string		handleDELETE(HttpRequest& request);

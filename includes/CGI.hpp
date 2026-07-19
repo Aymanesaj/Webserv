@@ -31,7 +31,7 @@ class CGI
         
         CGI(HttpRequest& request, LocationConfig& location,
                    const std::string& script_path, HttpResponse& response);
-        std::string  execute();
+
         CgiProcessInfo startProcess();
         std::string  parseOutput(const std::string& output);
 };

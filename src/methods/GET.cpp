@@ -10,8 +10,6 @@ std::string     HttpResponse::handleGET(HttpRequest& request)
         path += location.index;
     if (location.has_return && !location.return_url.empty())
         return this->redirectWithCookie(location.return_url, "");
-    if (isCGI(request.getPath(), location))
-        return this->handleCGI(request);
     if (Utils::is_Directory(path)) {
         if (path[path.length() - 1] != '/')
             path += "/";

@@ -234,6 +234,18 @@ void Server::readRequest(size_t& i)
 	if (qpos != std::string::npos)
 		cgiPath = cgiPath.substr(0, qpos);
 	LocationConfig location = ConfigParser::findLocation(cgiPath, getServer(request.getHeaders().at("Host"), fd));
+
+	std::string physPath = location.root + cgiPath;
+	if (Utils::is_Directory(physPath) && location.has_index && !location.index.empty()) {
+		if (cgiPath[cgiPath.length() - 1] != '/')
+			cgiPath += "/";
+		cgiPath += location.index;
+		std::string newReqPath = cgiPath;
+		if (qpos != std::string::npos)
+			newReqPath += request.getPath().substr(qpos);
+		request.setPath(newReqPath);
+	}
+
 	if (response.isCGI(request.getPath(), location))
 	{
 		std::string path = location.root + cgiPath;
@@ -356,13 +368,8 @@ void Server::handleCgiRead(size_t& i)
 	pid_t ret = waitpid(state.pid, &status, WNOHANG);
 	if (ret == 0)
 	{
-		usleep(1000);
-		ret = waitpid(state.pid, &status, WNOHANG);
-		if (ret == 0)
-		{
-			kill(state.pid, SIGKILL);
-			waitpid(state.pid, &status, 0);
-		}
+		kill(state.pid, SIGKILL);
+		waitpid(state.pid, &status, 0);
 	}
 	else if (ret == -1)
 		status = -1;

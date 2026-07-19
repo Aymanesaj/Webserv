@@ -35,7 +35,11 @@ CgiProcessInfo CGI::startProcess()
         close(pi_in[0]);
         dup2(pi_out[1], STDOUT_FILENO);
         close(pi_out[1]);
-        dup2(STDERR_FILENO, "/dev/null");
+        int devNull = open("/dev/null", O_WRONLY);
+        if (devNull != -1) {
+            dup2(devNull, STDERR_FILENO);
+            close(devNull);
+        }
         dir = _script_path.substr(0, _script_path.find_last_of('/'));
         std::string script_name = _script_path.substr(_script_path.find_last_of('/') + 1);
         chdir(dir.c_str());

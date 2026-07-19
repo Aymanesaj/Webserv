@@ -305,7 +305,7 @@ std::string     HttpResponse::handlePOST(HttpRequest& request)
     else if (request.getPath() == "/upload")
         return this->handleUpload(request, ConfigParser::findLocation(request.getPath(), this->_server));
     else
-        return this->errorResponse(NOT_FOUND);
+        return this->errorResponse(METHOD_NOT_ALLOWED);
     this->setHeader("Content-Type", "text/html");
     this->setHeader("Content-Length", Utils::to_string_c98(response_html.size()));
     this->setBody(response_html);

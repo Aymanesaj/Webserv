@@ -16,6 +16,7 @@ class CGI
 {
 	private:
         std::string                         _script_path;
+        std::string                         _ext;
         std::string                         _interpreter;
         std::map<std::string, std::string>  _env;
         HttpRequest&                        _request;

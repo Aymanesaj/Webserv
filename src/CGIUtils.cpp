@@ -2,16 +2,19 @@
 
 bool HttpResponse::isCGI(const std::string& path, const LocationConfig& location)
 {
-	if (!location.has_cgi_path || !location.has_cgi_extension)
+	if (location.cgi.empty())
 		return false;
-	const std::string& ext = location.cgi_ext;
 	std::string cleanPath = path;
 	size_t qpos = cleanPath.find('?');
 	if (qpos != std::string::npos)
 		cleanPath = cleanPath.substr(0, qpos);
-	if (cleanPath.size() < ext.size())
-		return false;
-	return cleanPath.compare(cleanPath.size() - ext.size(), ext.size(), ext) == 0;
+    
+    for (std::map<std::string, std::string>::const_iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
+        const std::string& ext = it->first;
+        if (cleanPath.size() >= ext.size() && cleanPath.compare(cleanPath.size() - ext.size(), ext.size(), ext) == 0)
+            return true;
+    }
+	return false;
 }
 
 void CGI::buildEnv()
@@ -20,7 +23,7 @@ void CGI::buildEnv()
 	std::string script_name;
 	std::string path_info;
 	size_t pos = std::string::npos;
-	const std::string& ext = _location.cgi_ext;
+	const std::string& ext = _ext;
 
 	pos = uri.find(ext);
 	if (pos != std::string::npos)
@@ -33,7 +36,14 @@ void CGI::buildEnv()
 	_env["QUERY_STRING"] = _request.getQuery();
 	_env["CONTENT_TYPE"] = _request.getContentType();
 	_env["CONTENT_LENGTH"] = Utils::to_string_c98(static_cast<int>(_request.getBodySize()));
-	_env["SCRIPT_FILENAME"] = _script_path;
+	char *abs = realpath(_script_path.c_str(), NULL);
+	if (abs)
+	{
+		_env["SCRIPT_FILENAME"] = std::string(abs);
+		free(abs);
+	}
+	else
+		_env["SCRIPT_FILENAME"] = _script_path;
 	_env["SCRIPT_NAME"] = script_name;
 	_env["PATH_INFO"] = path_info;
 	_env["SERVER_NAME"] = "localhost";
@@ -143,5 +153,11 @@ CGI::CGI(HttpRequest& request, LocationConfig& location, const std::string& scri
 	HttpResponse& response)
 	: _script_path(script_path), _request(request), _location(location), _response(response)
 {
-	_interpreter = location.cgi_path;
+	for (std::map<std::string, std::string>::iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
+        if (_script_path.size() >= it->first.size() && _script_path.compare(_script_path.size() - it->first.size(), it->first.size(), it->first) == 0) {
+            _ext = it->first;
+            _interpreter = it->second;
+            break;
+        }
+    }
 }

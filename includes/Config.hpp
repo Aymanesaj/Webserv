@@ -17,16 +17,13 @@ struct LocationConfig {
     std::string index;
     bool autoindex;
 	bool upload_enable;
-	std::string	cgi_ext;
 	std::string	upload_path;
-	std::string	cgi_path;
+	std::map<std::string, std::string> cgi;
     std::vector<std::string> allowed_methods;
     std::map<size_t, std::string> error_pages;
 	std::string return_url;
 	bool has_root;
 	bool has_return;
-	bool has_cgi_path;
-	bool has_cgi_extension;
 	bool has_index;
 	bool has_upload_store;
 	bool has_upload_enable;

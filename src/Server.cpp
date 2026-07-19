@@ -249,8 +249,16 @@ void Server::readRequest(size_t& i)
 	if (response.isCGI(request.getPath(), location))
 	{
 		std::string path = location.root + cgiPath;
-		if (!location.has_cgi_path || !location.has_cgi_extension
-			|| access(location.cgi_path.c_str(), X_OK) != 0)
+        
+        std::string interpreter;
+        for (std::map<std::string, std::string>::const_iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
+            if (path.size() >= it->first.size() && path.compare(path.size() - it->first.size(), it->first.size(), it->first) == 0) {
+                interpreter = it->second;
+                break;
+            }
+        }
+
+		if (interpreter.empty() || access(interpreter.c_str(), X_OK) != 0)
 		{
 			std::string err = response.errorResponse(INTERNAL_SERVER_ERROR);
 			std::cout << " -> " << response.getStatusCode() << std::endl;
@@ -489,16 +497,25 @@ void Server::finalizeCgiResponse(int pipeFd, int exitStatus)
 	CgiState& state = it->second;
 	std::string raw_resp;
 
-	if (exitStatus == -1 || (WIFEXITED(exitStatus) && WEXITSTATUS(exitStatus) != 0))
+	bool processKilled = WIFSIGNALED(exitStatus);
+	bool processFailed = exitStatus == -1 || (processKilled && !state.outputBuf.size());
+	bool exitedWithError = WIFEXITED(exitStatus) && WEXITSTATUS(exitStatus) != 0
+	                       && state.outputBuf.empty();
+
+	if (processFailed || exitedWithError)
 	{
 		raw_resp = state.response.errorResponse(INTERNAL_SERVER_ERROR);
 	}
 	else
 	{
+		std::string reqPath = state.request->getPath();
+		size_t qp = reqPath.find('?');
+		if (qp != std::string::npos)
+			reqPath = reqPath.substr(0, qp);
 		LocationConfig location = ConfigParser::findLocation(
-			state.request->getPath(),
+			reqPath,
 			getServer(state.request->getHeaders().at("Host"), state.clientFd));
-		std::string path = location.root + state.request->getPath();
+		std::string path = location.root + reqPath;
 		CGI cgi(*state.request, location, path, state.response);
 		raw_resp = cgi.parseOutput(state.outputBuf);
 	}

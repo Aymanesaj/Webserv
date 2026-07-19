@@ -3,8 +3,6 @@
 LocationConfig::LocationConfig() : autoindex(false), upload_enable(false) {
 	has_root = false;
 	has_return = false;
-	has_cgi_path = false;
-	has_cgi_extension = false;
 	has_index = false;
 	has_upload_store = false;
 	has_upload_enable = false;
@@ -135,14 +133,17 @@ LocationConfig ConfigParser::parseLocation()
 			assignString(location.root);
 		else if (directive == "return" && (!location.has_return && (location.has_return = true)))
 			assignString(location.return_url);
-		else if (directive == "cgi_path" && (!location.has_cgi_path && (location.has_cgi_path = true)))
-			assignString(location.cgi_path);
 		else if (directive == "index" && (!location.has_index && (location.has_index = true)))
 			assignString(location.index);
 		else if (directive == "upload_store" && (!location.has_upload_store && (location.has_upload_store = true)))
 			assignString(location.upload_path);
-		else if (directive == "cgi_extension" && (!location.has_cgi_extension && (location.has_cgi_extension = true)))
-			assignString(location.cgi_ext);
+		else if (directive == "cgi")
+		{
+			std::string ext = consume();
+			std::string path = consume();
+			location.cgi[ext] = path;
+			expect(";");
+		}
 		else if (directive == "error_page")
 			handle_error_page(location);
 		else if (directive == "upload_enable" && (!location.has_upload_enable && (location.has_upload_enable = true)))
@@ -282,9 +283,6 @@ void	ConfigParser::validate(){
 		{
 			if (__locations[idx].allowed_methods.empty())
 				throw std::runtime_error("There is no location method");
-			if ((!__locations[idx].cgi_ext.empty() && __locations[idx].cgi_path.empty())
-				|| (__locations[idx].cgi_ext.empty() && !__locations[idx].cgi_path.empty()))
-				throw std::runtime_error("CGI parameters has only one of (extention or path) need both.");
 			if (__locations[idx].upload_enable && __locations[idx].upload_path.empty())
 				throw std::runtime_error("Upload enabled with no path.");
 			if (__locations[idx].root.empty())

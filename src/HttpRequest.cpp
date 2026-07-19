@@ -157,6 +157,8 @@ const std::string& HttpRequest::getQuery( void ) const
 const std::string& HttpRequest::getContentType( void ) const
 {
     static const std::string empty;
+    if (this->headers.find("Content-type") != this->headers.end())
+        return this->headers.at("Content-type");
     if (this->headers.find("Content-Type") != this->headers.end())
         return this->headers.at("Content-Type");
     return empty;

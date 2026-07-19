@@ -181,7 +181,7 @@ std::string HttpResponse::handleAutoIndex(HttpRequest& request, const LocationCo
         std::string full_path = path + name;
         if (Utils::is_Directory(full_path))
             name += "/";
-        body += "<a href=\"" + request.getPath() + "/" + name + "\">" + name + "</a>\n";
+        body += "<a href=\"" + name + "\">" + name + "</a>\n";
     }
     closedir(dir);
     body += "</pre><hr></body></html>";

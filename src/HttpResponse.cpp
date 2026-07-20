@@ -113,21 +113,34 @@ std::string    HttpResponse::errorResponse(StatusCode errorCode)
 
 std::string     HttpResponse::getErrorPage(StatusCode errorCode) const
 {
+    std::map<size_t, std::string>::const_iterator it = this->_server.error_pages.find(errorCode);
+    if (it != this->_server.error_pages.end()) {
+        return it->second;
+    }
+
+    std::string root = this->_server.root;
+    if (root.empty()) {
+        root = "www";
+    }
+    if (root[root.length() - 1] == '/') {
+        root = root.substr(0, root.length() - 1);
+    }
+
     switch (errorCode)
     {
-        case BAD_REQUEST: return "www/error/400.html";
-        case FORBIDDEN: return "www/error/403.html";
-        case NOT_FOUND: return "www/error/404.html";
-        case METHOD_NOT_ALLOWED: return "www/error/405.html";
-        case REQUEST_TIMEOUT: return "www/error/408.html";
-        case CONTENT_LENGTH_REQUIRED: return "www/error/411.html";
-        case CONTENT_TOO_LARGE: return "www/error/413.html";
-        case URI_TOO_LONG: return "www/error/414.html";
-        case INTERNAL_SERVER_ERROR: return "www/error/500.html";
-        case NOT_IMPLEMENTED: return "www/error/501.html";
-        case HTTP_VERSION_NOT_SUPPORTED: return "www/error/505.html";
-        case GATEWAY_TIMEOUT: return "www/error/504.html";
-        default: return "www/error/400.html";
+        case BAD_REQUEST: return root + "/error/400.html";
+        case FORBIDDEN: return root + "/error/403.html";
+        case NOT_FOUND: return root + "/error/404.html";
+        case METHOD_NOT_ALLOWED: return root + "/error/405.html";
+        case REQUEST_TIMEOUT: return root + "/error/408.html";
+        case CONTENT_LENGTH_REQUIRED: return root + "/error/411.html";
+        case CONTENT_TOO_LARGE: return root + "/error/413.html";
+        case URI_TOO_LONG: return root + "/error/414.html";
+        case INTERNAL_SERVER_ERROR: return root + "/error/500.html";
+        case NOT_IMPLEMENTED: return root + "/error/501.html";
+        case HTTP_VERSION_NOT_SUPPORTED: return root + "/error/505.html";
+        case GATEWAY_TIMEOUT: return root + "/error/504.html";
+        default: return root + "/error/400.html";
     }
 }
 

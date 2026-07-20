@@ -1,2 +1,4 @@
 .vscode
 webserv
+www/uploads/*
+!www/uploads/.gitkeep

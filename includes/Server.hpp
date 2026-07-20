@@ -55,6 +55,9 @@ class Server
         ServerConfig&   getServer(std::string host, int fd);
         void acceptClient(size_t& i);
         void readRequest(size_t& i);
+        void handleCgiRequest(size_t& i, HttpRequest& request, HttpResponse& response,
+                              LocationConfig& location, const std::string& cgiPath,
+                              int fd, bool closeConn, bool isLogout);
         void writeResponse(size_t& i);
         void queueResponse(size_t& i, const std::string& resp, bool closeAfter);
         void removeClient(size_t& i);

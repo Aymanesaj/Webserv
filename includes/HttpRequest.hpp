@@ -34,8 +34,8 @@ class HttpRequest
         const std::string&      getCookies( void ) const;
         const std::string&      getBodyFilePath( void ) const;
         const std::string       getTheme( void ) const;
-        const std::string&       getQuery( void ) const;
-        const std::string&       getContentType( void ) const;
+        const std::string       getQuery( void ) const;
+        const std::string       getContentType( void ) const;
         int                     getBody( void ) const;
         size_t                  getBodySize( void ) const;
         Session&                getSession( void );

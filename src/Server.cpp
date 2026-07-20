@@ -236,7 +236,7 @@ void Server::readRequest(size_t& i)
 	LocationConfig location = ConfigParser::findLocation(cgiPath, getServer(request.getHeaders().at("Host"), fd));
 
 	std::string physPath = location.root + cgiPath;
-	if (Utils::is_Directory(physPath) && location.has_index && !location.index.empty()) {
+	if (request.getMethod() != "DELETE" && Utils::is_Directory(physPath) && location.has_index && !location.index.empty()) {
 		if (cgiPath[cgiPath.length() - 1] != '/')
 			cgiPath += "/";
 		cgiPath += location.index;
@@ -248,8 +248,14 @@ void Server::readRequest(size_t& i)
 
 	if (response.isCGI(request.getPath(), location))
 	{
+		if (!location.isMethodAllowed(request.getMethod()))
+		{
+			std::string err = response.errorResponse(METHOD_NOT_ALLOWED);
+			std::cout << " -> " << response.getStatusCode() << std::endl;
+			queueResponse(i, err, closeConn);
+			return ;
+		}
 		std::string path = location.root + cgiPath;
-        
         std::string interpreter;
         for (std::map<std::string, std::string>::const_iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
             if (path.size() >= it->first.size() && path.compare(path.size() - it->first.size(), it->first.size(), it->first) == 0) {

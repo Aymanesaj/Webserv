@@ -46,10 +46,29 @@ void CGI::buildEnv()
 		_env["SCRIPT_FILENAME"] = _script_path;
 	_env["SCRIPT_NAME"] = script_name;
 	_env["PATH_INFO"] = path_info;
-	_env["SERVER_NAME"] = "localhost";
+	const std::map<std::string, std::string>& headers = _request.getHeaders();
+	std::string server_name = "localhost";
+	if (headers.find("Host") != headers.end()) {
+		server_name = headers.at("Host");
+		size_t colon = server_name.find(':');
+		if (colon != std::string::npos)
+			server_name = server_name.substr(0, colon);
+	}
+	_env["SERVER_NAME"] = server_name;
 	_env["SERVER_PROTOCOL"] = _request.getVersion();
 	_env["REDIRECT_STATUS"] = "200";
 	_env["REMOTE_ADDR"] = "127.0.0.1";
+
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+		std::string header_name = "HTTP_";
+		for (size_t i = 0; i < it->first.length(); ++i) {
+			if (it->first[i] == '-')
+				header_name += '_';
+			else
+				header_name += std::toupper(it->first[i]);
+		}
+		_env[header_name] = it->second;
+	}
 }
 
 void CGI::buildEnvArray()

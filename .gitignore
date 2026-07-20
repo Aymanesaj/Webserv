@@ -2,3 +2,5 @@
 webserv
 www/uploads/*
 !www/uploads/.gitkeep
+en.subject.pdf
+issues_report.md

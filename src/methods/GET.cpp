@@ -6,6 +6,8 @@ std::string     HttpResponse::handleGET(HttpRequest& request)
     if (!location.isMethodAllowed(request.getMethod()))
         return this->errorResponse(METHOD_NOT_ALLOWED);
     std::string path = location.root + request.getPath();
+    if (!Utils::isPathSafe(path, location.root))
+        return this->errorResponse(FORBIDDEN);
     if (path == location.root + "/")
         path += location.index;
     if (location.has_return && !location.return_url.empty())

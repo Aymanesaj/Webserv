@@ -17,6 +17,13 @@ void Server::handleCgiRequest(size_t& i, HttpRequest& request, HttpResponse& res
 	}
 
 	std::string path = location.root + cgiPath;
+	if (!Utils::isPathSafe(path, location.root))
+	{
+		std::string err = response.errorResponse(FORBIDDEN);
+		std::cout << " -> " << response.getStatusCode() << std::endl;
+		queueResponse(i, err, closeConn);
+		return ;
+	}
 	std::string interpreter;
 	for (std::map<std::string, std::string>::const_iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
 		if (path.size() >= it->first.size() && path.compare(path.size() - it->first.size(), it->first.size(), it->first) == 0) {

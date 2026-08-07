@@ -7,7 +7,7 @@ struct CgiProcessInfo {
     pid_t pid;
     int   pipeFd;
     int   pipeFdIn;
-    bool  ok; // to check if process started successfully
+    bool  ok;
 
     CgiProcessInfo() : pid(-1), pipeFd(-1), pipeFdIn(-1), ok(false) {}
 };

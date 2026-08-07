@@ -31,7 +31,7 @@ void ConfigParser::tokenize(const std::string& filename)
 		
 	while (file.get(c))
 	{
-		if (c == '#') { while (c != '\n' && file.get(c)) { /* skippi a 3abd samad */ } }
+		if (c == '#') { while (c != '\n' && file.get(c)) {}}
 		else if (c == '{' || c == '}' || c == ';') {
 			if (!current_word.empty()) {
 				_tokens.push_back(current_word);
@@ -208,27 +208,6 @@ void ConfigParser::parse()
 		_servers.push_back(parseServer());
 	}
 }
-
-// LocationConfig ConfigParser::findLocation(const std::string& uri, const ServerConfig& server)
-// {
-//     int best_match_length = -1;
-//     int bestIndex = -1;
-
-//     for (int i = 0; i < (int)server.locations.size(); i++)
-//     {
-//         if (uri.find(server.locations[i].path) == 0)
-//         {
-//             if ((int)server.locations[i].path.length() > best_match_length)
-//             {
-//                 best_match_length = server.locations[i].path.length();
-//                 bestIndex = i;
-//             }
-//         }
-//     }
-//     if (bestIndex == -1)
-//         throw std::runtime_error("Location not found");
-//     return server.locations[bestIndex];
-// }
 
 LocationConfig ConfigParser::findLocation(const std::string& uri,
                                           const ServerConfig& server)

@@ -182,6 +182,8 @@ std::string HttpResponse::handleMultipartBody(HttpRequest& request, const Locati
         std::ofstream outfile;
         if (is_file) {
             std::string full_path = location.upload_path + "/" + file_name;
+            if (!Utils::isPathSafe(full_path, location.upload_path))
+                return this->errorResponse(FORBIDDEN);
             outfile.open(full_path.c_str(), std::ios::binary);
             if (!outfile.is_open())
                 return this->errorResponse(INTERNAL_SERVER_ERROR);

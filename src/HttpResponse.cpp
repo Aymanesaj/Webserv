@@ -180,6 +180,8 @@ void HttpResponse::setServer(ServerConfig server)
 std::string HttpResponse::handleAutoIndex(HttpRequest& request, const LocationConfig& location)
 {
     std::string path = location.root + request.getPath();
+    if (!Utils::isPathSafe(path, location.root))
+        return this->errorResponse(FORBIDDEN);
     DIR* dir = opendir(path.c_str());
     if (!dir)
         return this->errorResponse(NOT_FOUND);

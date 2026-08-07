@@ -36,14 +36,12 @@ void CGI::buildEnv()
 	_env["QUERY_STRING"] = _request.getQuery();
 	_env["CONTENT_TYPE"] = _request.getContentType();
 	_env["CONTENT_LENGTH"] = Utils::to_string_c98(static_cast<int>(_request.getBodySize()));
-	char *abs = realpath(_script_path.c_str(), NULL);
-	if (abs)
-	{
-		_env["SCRIPT_FILENAME"] = std::string(abs);
-		free(abs);
-	}
+	size_t last_slash = _script_path.find_last_of('/');
+	if (last_slash != std::string::npos)
+		_env["SCRIPT_FILENAME"] = _script_path.substr(last_slash + 1);
 	else
 		_env["SCRIPT_FILENAME"] = _script_path;
+
 	_env["SCRIPT_NAME"] = script_name;
 	_env["PATH_INFO"] = path_info;
 	const std::map<std::string, std::string>& headers = _request.getHeaders();
@@ -170,7 +168,7 @@ std::string CGI::parseOutput(const std::string& output)
 
 CGI::CGI(HttpRequest& request, LocationConfig& location, const std::string& script_path,
 	HttpResponse& response)
-	: _script_path(script_path), _request(request), _location(location), _response(response)
+	: _script_path(script_path), _request(request), _location(location),_response(response)
 {
 	for (std::map<std::string, std::string>::iterator it = location.cgi.begin(); it != location.cgi.end(); ++it) {
         if (_script_path.size() >= it->first.size() && _script_path.compare(_script_path.size() - it->first.size(), it->first.size(), it->first) == 0) {

@@ -7,7 +7,7 @@ std::string     HttpResponse::handleDELETE(HttpRequest& request)
     std::string path = location.root + request.getPath();
     if (request.getPath().empty() || request.getPath() == "/")
         return (this->errorResponse(BAD_REQUEST));
-    if(path.find("..") != std::string::npos)
+    if (!Utils::isPathSafe(path, location.root))
         return errorResponse(FORBIDDEN);
     if (!location.isMethodAllowed("DELETE"))
         return errorResponse(METHOD_NOT_ALLOWED);

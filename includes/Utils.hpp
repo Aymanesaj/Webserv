@@ -23,6 +23,8 @@ class Utils
         static  bool                is_Writable(const std::string& path);
         static  bool                extractLine(std::vector<char>& buffer, int fd, std::string& line);
         static  std::string         getExtension(const std::string& ContentType);
+        static  bool                isPathSafe(const std::string& fullPath, const std::string& root);
+        static  std::string         normalizePath(const std::string& path);
 };
 
 #endif

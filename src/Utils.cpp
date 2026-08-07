@@ -164,3 +164,44 @@ std::string Utils::getExtension(const std::string& ContentType)
     else
         return "";
 }
+
+std::string Utils::normalizePath(const std::string& path)
+{
+    std::vector<std::string> segments;
+    std::string segment;
+    std::istringstream stream(path);
+
+    while (std::getline(stream, segment, '/'))
+    {
+        if (segment.empty() || segment == ".")
+            continue;
+        if (segment == "..")
+        {
+            if (!segments.empty())
+                segments.pop_back();
+        }
+        else
+            segments.push_back(segment);
+    }
+    std::string result = "/";
+    for (size_t i = 0; i < segments.size(); i++)
+    {
+        if (i > 0)
+            result += "/";
+        result += segments[i];
+    }
+    return result;
+}
+
+bool Utils::isPathSafe(const std::string& fullPath, const std::string& root)
+{
+    std::string normalizedRoot = normalizePath(root);
+    std::string normalizedPath = normalizePath(fullPath);
+
+    if (normalizedPath.compare(0, normalizedRoot.size(), normalizedRoot) != 0)
+        return false;
+    if (normalizedPath.size() > normalizedRoot.size()
+        && normalizedPath[normalizedRoot.size()] != '/')
+        return false;
+    return true;
+}

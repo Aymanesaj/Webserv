@@ -87,7 +87,6 @@ void Server::init(const std::vector<ServerConfig>& servers)
 void Server::run()
 {
 	while (flag){
-		// short timeout to check CGI timeouts periodically
 		int timeout = cgi_processes.empty() ? -1 : 500;
 		int ready = poll(fds.data(), fds.size(), timeout);
 		if (!ready)
@@ -102,16 +101,10 @@ void Server::run()
 			if (fds[i].revents & (POLLHUP | POLLERR))
 			{
 				if (cgi_pipe_fds.count(fds[i].fd))
-				{
 					handleCgiRead(i);
-					continue;
-				}
-				if (cgi_in_to_out.count(fds[i].fd))
-				{
+				else if (cgi_in_to_out.count(fds[i].fd))
 					handleCgiWrite(i);
-					continue;
-				}
-				if (!listening_sockets.count(fds[i].fd))
+				else if (!listening_sockets.count(fds[i].fd))
 					removeClient(i);
 				continue;
 			}

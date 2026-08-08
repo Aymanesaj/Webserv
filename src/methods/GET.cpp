@@ -43,7 +43,7 @@ std::string     HttpResponse::handleGET(HttpRequest& request)
     this->_body = buffer.str();
     if (request.getPath() == "/profile.html")
         Utils::replace(this->_body, "{{USERNAME}}", session.getUserName());
-    else if (request.getPath() == "/")
+    else if (request.getPath() == "/index.html")
     {
         const std::string theme_cookie = request.getTheme();
         const std::string token = (theme_cookie == "theme-dark") ? "theme-light" : "theme-dark";
